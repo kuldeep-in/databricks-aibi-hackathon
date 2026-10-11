@@ -22,27 +22,16 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("source_schema", "<source_schema>", "2. Source schema (read-only)")
+dbutils.widgets.text("source_schema", "hack_14oct", "2. Source schema (read-only)")
 dbutils.widgets.text("team_schema", "team_XX", "3. Team schema (team_01..team_05)")
 dbutils.widgets.text("team_group", "", "4. Team group (optional owner)")
 
 # COMMAND ----------
 
-import re
-
 catalog = dbutils.widgets.get("catalog").strip()
 source_schema = dbutils.widgets.get("source_schema").strip()
 team_schema = dbutils.widgets.get("team_schema").strip()
 team_group = dbutils.widgets.get("team_group").strip()
-
-def is_placeholder(v):
-    return (not v) or v.startswith("<") or v == "team_XX"
-
-missing = [n for n, v in [("catalog", catalog), ("source_schema", source_schema), ("team_schema", team_schema)] if is_placeholder(v)]
-if missing:
-    raise ValueError(f"Fill in the widget(s) {missing} before running. Replace the <...> placeholders.")
-if not re.fullmatch(r"team_\d{2}", team_schema):
-    raise ValueError(f"team_schema must look like 'team_03', got '{team_schema}'.")
 
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)

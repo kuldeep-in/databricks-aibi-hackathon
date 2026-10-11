@@ -16,7 +16,7 @@ and (optionally) **Databricks Apps built with Genie Code**.
 
 ## Data model
 
-One catalog, one **read-only source schema** (`hack`), and one schema per team (`team_01`…`team_05`). Each team **copies** the source
+One catalog, one **read-only source schema** (`hack_14oct`), and one schema per team (`team_01`…`team_05`). Each team **copies** the source
 tables into its own schema, so it owns the data **and its descriptions**. A facilitator-only `facilitator_kit` schema holds the answer key.
 
 ## Repository layout
@@ -32,16 +32,17 @@ docs/
     ├── D-client-executive.md
     └── E-insights-analyst.md
 notebooks/
-├── 00_facilitator_runbook.py  # step-by-step setup and test: schemas, data load (Volume → hack), constraints, answer key, grants, dry run, cleanup
-├── 01_team_setup.py           # run by each team: create team_XX and deep clone every table from hack
-└── 02_apply_reference_descriptions.py  # facilitator fallback: apply the answer-key descriptions to a team schema
+├── 00_facilitator_runbook.py  # step-by-step setup and test: schemas, data load (Volume → hack_14oct), constraints, answer key, grants, dry run, cleanup
+├── 01_team_setup.py           # run by each team: create team_XX and deep clone every table from hack_14oct
+├── 02_apply_reference_descriptions.py  # facilitator fallback: apply the answer-key descriptions to a team schema
+└── 03_generate_synthetic_data.py       # synthetic, fictional dataset generator (called from runbook Step 3)
 ```
 
 ## Getting started (facilitator)
 
 1. Import `notebooks/` into your Databricks workspace (keep `docs/` alongside them), or clone this repo as a Git folder.
-2. Open `00_facilitator_runbook`, replace the `<...>` placeholder widgets (catalog, schemas, groups), and run it **step by step**.
-3. Prepare your data files (CSV/Parquet/JSON, file name = table name). Step 3 of the runbook loads them into the source schema.
+2. Open `00_facilitator_runbook`, set the `catalog` widget (the source schema defaults to `hack_14oct`), and run it **step by step**.
+3. Step 3 generates the synthetic dataset into `hack_14oct` (default). Alternatively, load your own CSV/Parquet/JSON files (file name = table name).
 4. Do a dry run as a test team (Step 8), then test every sprint (Step 9).
 5. Fill in the placeholders in `docs/attendee-guide.md` (workspace URL, catalog, warehouses, notebook path) and share it with attendees.
 

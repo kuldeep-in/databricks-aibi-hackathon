@@ -64,12 +64,12 @@ All five challenge cards (section 8) are personas inside this one theme, so ever
 
 ```
 <hack_catalog>                          one catalog for the whole event
-├── hack               (READ-ONLY)     ← facilitator loads the sample data here (single source of truth), with minimal descriptions on purpose
+├── hack_14oct         (READ-ONLY)     ← facilitator loads the sample data here (single source of truth), with minimal descriptions on purpose
 │     ├── dim_* / fact_* tables
 │     ├── visit_notes
 │     └── Volume: landing/              ← optional CSV copies for the bonus "ingest it yourself" challenge
 ├── facilitator_kit    (FACILITATOR ONLY) ← answer keys: fully described reference tables, metric views, Genie config, starter dashboards
-├── team_01            (OWNED BY TEAM)  ← created by the team on the day; data copied from hack
+├── team_01            (OWNED BY TEAM)  ← created by the team on the day; data copied from hack_14oct
 ├── team_02
 ├── ...
 └── team_05
@@ -77,7 +77,7 @@ All five challenge cards (section 8) are personas inside this one theme, so ever
 
 **How it works**
 
-1. The facilitator builds `hack` before the day and makes it **read-only** for all participants.
+1. The facilitator builds `hack_14oct` before the day and makes it **read-only** for all participants.
 2. At the start, each team **creates its own schema** (`team_XX`) and **copies the source tables into it** with a ready-made script (section 3.2).
 3. From then on, teams work **only in their own schema**. Their dashboards, metric views, Genie space and (optional) app all point at `team_XX.*`.
 4. Teams **own the metadata** of their copy. They write the table and column descriptions themselves (section 5), and can change
@@ -91,9 +91,9 @@ All five challenge cards (section 8) are personas inside this one theme, so ever
 |---|---|
 | Simple to administer | One catalog, one data load, one small grant script |
 | Teams own their data **and its descriptions** | They can `COMMENT ON` tables and columns, accept AI-generated descriptions, `ALTER`, create metric views and write back without asking for grants. **This is why we copy instead of sharing one schema** |
-| Safe | `hack` is read-only. A team that breaks its own data just re-runs the copy script |
+| Safe | `hack_14oct` is read-only. A team that breaks its own data just re-runs the copy script |
 | Teams grant their own app's access (optional App track) | The team owns its schema, so it can grant its app's service principal access itself |
-| Shows Unity Catalog in action | Ownership, grants, lineage (`hack` → `team_XX` → metric view → dashboard/Genie), cloning |
+| Shows Unity Catalog in action | Ownership, grants, lineage (`hack_14oct` → `team_XX` → metric view → dashboard/Genie), cloning |
 | Easy cleanup | `DROP SCHEMA <hack_catalog>.team_XX CASCADE`, or drop the whole catalog |
 
 **Trade-offs to manage**
@@ -111,15 +111,15 @@ All five challenge cards (section 8) are personas inside this one theme, so ever
 
 ### Fallback (if the customer can't create a new catalog)
 
-Use one existing catalog that the customer assigns, and create `hack`, `facilitator_kit` and the team schemas inside it. Nothing else changes.
+Use one existing catalog that the customer assigns, and create `hack_14oct`, `facilitator_kit` and the team schemas inside it. Nothing else changes.
 
 ---
 
 ## 3. Sample data design
 
 > **Status:** the facilitator prepares the data **files** (CSV, Parquet or JSON) separately. They aren't generated as part of this plan.
-> **Step 3 of the `00_facilitator_runbook` notebook loads them:** it creates the Volume `hack.landing`, you upload the files (file name = table name),
-> and it loads each file into a Delta table in `hack` and checks the data contract. Each team then copies the tables from `hack` into its
+> **Step 3 of the `00_facilitator_runbook` notebook loads them:** it creates the Volume `hack_14oct.landing`, you upload the files (file name = table name),
+> and it loads each file into a Delta table in `hack_14oct` and checks the data contract. Each team then copies the tables from `hack_14oct` into its
 > own schema with `01_team_setup`.
 > The tables below are the **target data contract**. The attendee guide, metric view template, Genie test questions and app prompts all refer to
 > these names, so keep them, or update those documents if the final names differ.
@@ -127,7 +127,7 @@ Use one existing catalog that the customer assigns, and create `hack`, `facilita
 The data needs to be *realistic and full of insight* (seasonality, under-performing regions, promo uplift, out-of-stock patterns) so that Genie
 and the dashboards have something to find.
 
-### 3.1 Tables (`<hack_catalog>.hack`): target data contract
+### 3.1 Tables (`<hack_catalog>.hack_14oct`): target data contract
 
 | Table | Grain | Approx. rows | Purpose |
 |---|---|---|---|
@@ -150,16 +150,16 @@ and the dashboards have something to find.
 - **"Trap" questions for Genie:** ambiguous terms such as "sales" (gross or net?), "last quarter" (calendar or fiscal?), and "top stores"
   (by sales or by growth?). The raw-table Genie gets these wrong, and the tuned Genie gets them right. That's the before/after story.
 
-**Data preparation checklist (facilitator, before T-3 days):** the Delta tables are loaded into `hack`, PK/FK constraints are added, column names
+**Data preparation checklist (facilitator, before T-3 days):** the Delta tables are loaded into `hack_14oct`, PK/FK constraints are added, column names
 keep the business abbreviations, the insights are planted, there are no real client names, and the fully described copy is in `facilitator_kit`.
 
 ### 3.1a Description strategy: undocumented on purpose
 
-Writing descriptions is a **key capability to showcase**, so the `hack` tables ship **almost undocumented**:
+Writing descriptions is a **key capability to showcase**, so the `hack_14oct` tables ship **almost undocumented**:
 
 | Where | What it contains | Why |
 |---|---|---|
-| `hack.*` (what teams copy) | A one-line table comment at most, **no column descriptions**, and a few realistic business abbreviations in column names (`nsv`, `gsv`, `osa_pct`, `pog_comp`, `fy_wk`, `rtl_grp`) | Like real source systems. Genie and the Assistant must guess, which gives a clear baseline |
+| `hack_14oct.*` (what teams copy) | A one-line table comment at most, **no column descriptions**, and a few realistic business abbreviations in column names (`nsv`, `gsv`, `osa_pct`, `pog_comp`, `fy_wk`, `rtl_grp`) | Like real source systems. Genie and the Assistant must guess, which gives a clear baseline |
 | `facilitator_kit.*` (answer key) | The same tables with full table and column descriptions, synonyms and tags | Used to mark team descriptions, and as a fallback if a team runs out of time |
 
 This makes the impact of descriptions **measurable**: teams record their Genie score before and after describing the data (section 5).
@@ -174,16 +174,16 @@ USE CATALOG <hack_catalog>;
 
 -- 1. Create the team schema and hand ownership to the team group
 CREATE SCHEMA IF NOT EXISTS IDENTIFIER(:team_schema)
-  COMMENT 'Hackathon working schema – copied from hack';
+  COMMENT 'Hackathon working schema – copied from hack_14oct';
 ALTER SCHEMA IDENTIFIER(:team_schema) OWNER TO `team_03`;   -- the team's group
 
 -- 2. Copy every source table. DEEP CLONE makes an independent copy (the minimal source comments come along).
 --    (The notebook loops over information_schema.tables, so the list never goes stale.)
-CREATE OR REPLACE TABLE IDENTIFIER(:team_schema || '.fact_sales_weekly') DEEP CLONE hack.fact_sales_weekly;
+CREATE OR REPLACE TABLE IDENTIFIER(:team_schema || '.fact_sales_weekly') DEEP CLONE hack_14oct.fact_sales_weekly;
 -- ... the same for every dim_* / fact_* / visit_notes table
 
 -- 3. Re-apply the PK/FK constraints (generated from the source definitions)
--- 4. Validation: row counts match hack, and constraints are present
+-- 4. Validation: row counts match hack_14oct, and constraints are present
 ```
 
 > Metric views and descriptions are **not** pre-built in team schemas. Building them is the hackathon exercise (Sprints 2 and 4).
@@ -323,7 +323,7 @@ and makes the value of tuning very visible.
 | Time | Sprint | Content | Checkpoint |
 |---|---|---|---|
 | 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, teams, rules and judging | Teams formed |
-| 0:15 – 0:30 | **Sprint 0: Team setup** | Run `01_team_setup` (create `team_XX`, copy the data from `hack`), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
+| 0:15 – 0:30 | **Sprint 0: Team setup** | Run `01_team_setup` (create `team_XX`, copy the data from `hack_14oct`), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
 | 0:30 – 1:00 | **Sprint 1: Dashboard quick win** | 5 min demo, then 25 min build: a dashboard straight on the team tables, using the AI assistant to create widgets, plus filters, then publish | **First dashboard published** |
 | 1:00 – 1:45 | **Sprint 2: Metric views** | 10 min demo, then 35 min build: metric view ladder L1–L5, and switch the dashboard to the metric views | **Dashboard v2 on metric views** |
 | 1:45 – 1:55 | Break | | |
@@ -447,7 +447,7 @@ Each card comes with **10 Genie test questions** with expected answers, includin
 | 5 | Make the facilitator the owner of `<hack_catalog>`, and give participants `USE CATALOG` + `CREATE SCHEMA` on it | Customer admin | T-1 week |
 | 6 | Create **2 serverless SQL warehouses** (Medium, autoscale 1–3), with `CAN USE` for the participants | Customer admin / facilitator | T-1 week |
 | 7 | *(App track only)* Confirm Genie Code and Apps are enabled, the app quota is ≥ 10, and the 5 apps are pre-created | Customer admin / facilitator | T-1 week |
-| 8 | Load `hack` and `facilitator_kit`, run the grant script, and smoke-test as a non-admin user | Facilitator | T-3 days |
+| 8 | Load `hack_14oct` and `facilitator_kit`, run the grant script, and smoke-test as a non-admin user | Facilitator | T-3 days |
 | 9 | Dry run as a test participant through every sprint, then drop the test schema | Facilitator | T-2 days |
 | 10 | Make sure every user can log in (SSO/MFA) to the workspace URL | Customer | T-1 day |
 
@@ -458,8 +458,8 @@ Each card comes with **10 Genie test questions** with expected answers, includin
 GRANT USE CATALOG, CREATE SCHEMA ON CATALOG <hack_catalog> TO `<hackathon_participants>`;
 
 -- Source schema: read-only for participants
-GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.hack TO `<hackathon_participants>`;
-GRANT READ VOLUME ON VOLUME <hack_catalog>.hack.landing TO `<hackathon_participants>`;   -- optional bonus
+GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.hack_14oct TO `<hackathon_participants>`;
+GRANT READ VOLUME ON VOLUME <hack_catalog>.hack_14oct.landing TO `<hackathon_participants>`;   -- optional bonus
 
 -- facilitator_kit: no grants to participants (answer keys)
 ```
@@ -476,11 +476,11 @@ Team schemas need **no facilitator grants**, because each team owns its schema. 
 ## 10. Facilitator kit (prepare in this folder)
 
 ```
-hack/
+databricks-aibi-hackathon/
 ├── hackathon-plan.md              ← this file
 ├── notebooks/                     ← import into your workspace (keep docs/ next to them)
-│   ├── 00_facilitator_runbook     ← ✅ created: step-by-step setup and test, including Step 3 data load (Volume → hack)
-│   ├── 01_team_setup              ← ✅ created: teams copy every table from hack to team_XX
+│   ├── 00_facilitator_runbook     ← ✅ created: step-by-step setup and test, including Step 3 data load (Volume → hack_14oct)
+│   ├── 01_team_setup              ← ✅ created: teams copy every table from hack_14oct to team_XX
 │   └── 02_apply_reference_descriptions ← ✅ created: fallback that applies the answer-key descriptions to a team schema
 │       (grants, answer-key build, metric view reference and smoke tests are all steps inside 00_facilitator_runbook)
 ├── attendee-guide.md              ← ✅ created: login, naming, sprint-by-sprint steps, cheat-sheets, Genie Code prompts
@@ -528,10 +528,10 @@ hack/
 | Users can't log in or lack entitlements | Login check at T-1 day, and one spare test account |
 | Teams fall behind a checkpoint | Starter assets in `facilitator_kit` for every sprint |
 | Metric view YAML errors slow teams down | A working template in the guide, the UI-based route plus the Assistant, and the reference view as a fallback |
-| Genie baseline is already "too good" (no visible improvement) | Leave `hack` undocumented, use business abbreviations in column names, and plant ambiguous "trap" questions and fiscal-calendar rules in the test set |
+| Genie baseline is already "too good" (no visible improvement) | Leave `hack_14oct` undocumented, use business abbreviations in column names, and plant ambiguous "trap" questions and fiscal-calendar rules in the test set |
 | AI-generated descriptions are accepted without review, so they're plausible but wrong | The business SME on each team reviews them, the answer key is used for scoring, and the scoreboard shows whether descriptions actually helped |
 | A team runs out of time in Sprint 4a | The facilitator gives it a script that applies the answer-key descriptions for the remaining tables |
-| A team breaks its data | Re-run `01_team_setup`. `hack` is read-only |
+| A team breaks its data | Re-run `01_team_setup`. `hack_14oct` is read-only |
 | Extra or oddly named schemas | Naming convention, and a facilitator check after Sprint 0 |
 | *(App track)* The app SP has no access | Pre-created apps, with the SP given `USE CATALOG` and warehouse access in advance; teams grant schema access themselves |
 

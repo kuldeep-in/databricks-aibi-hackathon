@@ -17,7 +17,7 @@ team answers. Facilitators will demo the **how** at the start of each sprint, so
 |---|---|
 | Workspace URL | `<workspace-url>` |
 | Catalog | `<hack_catalog>` |
-| Source data (read-only) | `<hack_catalog>.hack` |
+| Source data (read-only) | `<hack_catalog>.hack_14oct` |
 | Your team schema | `<hack_catalog>.team_XX` (your team number, for example `team_03`) |
 | SQL warehouse | `<warehouse-A>` (teams 1–3) / `<warehouse-B>` (teams 4–5) |
 | Team setup notebook | `<workspace-path>/01_team_setup` |
@@ -44,7 +44,7 @@ data modeller (metric views), and app builder (optional App track, otherwise a s
 
 ## 3. Rules
 
-1. Work **only in your team schema** (`team_XX`). `hack` is read-only, and you copy from it once.
+1. Work **only in your team schema** (`team_XX`). `hack_14oct` is read-only, and you copy from it once.
 2. Name everything with your team prefix: dashboard `T03 – …`, Genie space `T03 – …`, app `t03-…`, metric views `mv_…`.
 3. Use the **AI help everywhere**: the Assistant, AI-generated descriptions, AI-assisted dashboard widgets, and Genie Code for the app.
 4. **Record every Genie score** on the scoreboard (baseline, after descriptions, final).
@@ -76,7 +76,7 @@ data modeller (metric views), and app builder (optional App track, otherwise a s
 
 1. **One person** opens `01_team_setup`, sets `team_schema = team_XX`, and clicks **Run all**.
 2. Everyone opens **Catalog Explorer → `<hack_catalog>` → `team_XX`** and checks that the tables are there.
-3. Look at a few tables. Notice the **lineage** back to `hack`, and that the tables have **almost no descriptions**. You'll fix that later.
+3. Look at a few tables. Notice the **lineage** back to `hack_14oct`, and that the tables have **almost no descriptions**. You'll fix that later.
 
 ### Sprint 1: Dashboard quick win (30 min)
 

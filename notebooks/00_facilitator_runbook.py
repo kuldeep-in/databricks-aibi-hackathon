@@ -33,12 +33,12 @@
 # MAGIC %md
 # MAGIC ## Step 0 · Configuration (placeholders)
 # MAGIC
-# MAGIC Fill in the widgets at the top of the notebook. **Every `<...>` value must be replaced**, or the following cells stop with an error.
+# MAGIC Fill in the widgets at the top of the notebook. Replace every `<...>` value before you continue.
 # MAGIC
 # MAGIC | Widget | Meaning | Suggested value |
 # MAGIC |---|---|---|
 # MAGIC | `catalog` | The one catalog for the whole hackathon | *your choice* |
-# MAGIC | `source_schema` | The read-only source data schema that teams copy from | for example `hack` |
+# MAGIC | `source_schema` | The read-only source data schema that teams copy from | `hack_14oct` (default) |
 # MAGIC | `kit_schema` | The facilitator-only answer key (described tables, reference metric views) | for example `facilitator_kit` |
 # MAGIC | `participants_group` | The account group that contains all attendees (leave blank while testing alone) | for example `hackathon_participants` |
 # MAGIC | `test_team_schema` | The team schema used for your dry run | `team_99` |
@@ -48,7 +48,7 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("source_schema", "<source_schema>", "2. Source schema")
+dbutils.widgets.text("source_schema", "hack_14oct", "2. Source schema")
 dbutils.widgets.text("kit_schema", "<facilitator_kit_schema>", "3. Facilitator kit schema")
 dbutils.widgets.text("participants_group", "", "4. Participants group (optional)")
 dbutils.widgets.text("test_team_schema", "team_99", "5. Test team schema")
@@ -66,11 +66,6 @@ kit_schema = dbutils.widgets.get("kit_schema").strip()
 participants_group = dbutils.widgets.get("participants_group").strip()
 test_team_schema = dbutils.widgets.get("test_team_schema").strip()
 test_team_group = dbutils.widgets.get("test_team_group").strip()
-
-bad = [n for n, v in [("catalog", catalog), ("source_schema", source_schema), ("kit_schema", kit_schema),
-                      ("test_team_schema", test_team_schema)] if not v or v.startswith("<")]
-if bad:
-    raise ValueError(f"Step 0: replace the placeholder widget(s) {bad} before continuing.")
 
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)
@@ -138,6 +133,8 @@ display(spark.sql("""
 # MAGIC ## Step 2 · Create the source and facilitator-kit schemas ⚠️ changes things
 # MAGIC
 # MAGIC Creates `source_schema` (where the data goes) and `kit_schema` (the answer key). Both are idempotent.
+# MAGIC
+# MAGIC > ⚠️ **Make the `hack_14oct` schema read-only for participants** (grant only `USE SCHEMA` and `SELECT`).
 # MAGIC **Done when:** both schemas appear in Catalog Explorer.
 
 # COMMAND ----------
@@ -165,7 +162,7 @@ display(spark.sql(f"SHOW SCHEMAS IN {q(catalog)}"))
 # MAGIC | Sub-step | What | Changes anything? |
 # MAGIC |---|---|---|
 # MAGIC | **3-A** | **Option A:** run the synthetic data generator (about 5–10 min on serverless) | **Yes** |
-# MAGIC | 3a | Create the landing Volume `<source_schema>.landing` | **Yes** |
+# MAGIC | 3a | Create the landing Volume `hack_14oct.landing` | **Yes** |
 # MAGIC | 3a–3d | *Options B and C only:* create the landing Volume, get the files into it (**B:** download from GitHub, **C:** upload by hand in Catalog Explorer), preview them, and load them | **Yes** |
 # MAGIC | 3c | List the files and preview how they map to table names | No |
 # MAGIC | 3d | Load every file into a Delta table (overwrite) | **Yes** |

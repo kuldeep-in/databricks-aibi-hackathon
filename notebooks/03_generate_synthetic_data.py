@@ -34,7 +34,7 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("schema", "<source_schema>", "2. Target (source) schema")
+dbutils.widgets.text("schema", "hack_14oct", "2. Target (source) schema")
 dbutils.widgets.text("n_stores", "300", "3. Stores")
 dbutils.widgets.text("n_skus", "400", "4. SKUs")
 dbutils.widgets.text("n_weeks", "156", "5. Weeks of history")
@@ -48,8 +48,6 @@ from pyspark.sql import functions as F
 
 catalog = dbutils.widgets.get("catalog").strip()
 schema = dbutils.widgets.get("schema").strip()
-if not catalog or catalog.startswith("<") or not schema or schema.startswith("<"):
-    raise ValueError("Fill in the catalog and schema widgets (replace the <...> placeholders).")
 
 N_STORES = int(dbutils.widgets.get("n_stores"))
 N_SKUS = int(dbutils.widgets.get("n_skus"))

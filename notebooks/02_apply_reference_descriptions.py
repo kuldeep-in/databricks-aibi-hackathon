@@ -25,11 +25,6 @@ kit_schema = dbutils.widgets.get("kit_schema").strip()
 team_schema = dbutils.widgets.get("team_schema").strip()
 mode = dbutils.widgets.get("mode")
 
-bad = [n for n, v in [("catalog", catalog), ("kit_schema", kit_schema), ("team_schema", team_schema)]
-       if not v or v.startswith("<") or v == "team_XX"]
-if bad:
-    raise ValueError(f"Fill in the widget(s) {bad} before running.")
-
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)
 
