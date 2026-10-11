@@ -57,7 +57,7 @@ that every KPI uses a metric view measure.
 
 ## Sprint 4a: Describe these first
 
-`fact_sales_weekly`, `fact_budget_monthly`, `dim_date` (fiscal columns such as `fy_wk`), `dim_store`
+`fact_sales_weekly` (`nsv`, `wk_strt_dt`), `fact_budget_monthly` (`bgt_nsv`, `mth_strt_dt`), `dim_date` (fiscal columns `fy_cd`, `fy_q`, `fy_wk`), `dim_store` (`rgn`, `rtl_grp`)
 
 ## Sprint 4b: Genie tuning hints
 

@@ -22,14 +22,13 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("source_schema", "hack_14oct", "2. Source schema (read-only)")
-dbutils.widgets.text("team_schema", "team_XX", "3. Team schema (team_01..team_05)")
-dbutils.widgets.text("team_group", "", "4. Team group (optional owner)")
+dbutils.widgets.text("team_schema", "team_XX", "2. Team schema (team_01..team_05)")
+dbutils.widgets.text("team_group", "", "3. Team group (optional owner)")
 
 # COMMAND ----------
 
 catalog = dbutils.widgets.get("catalog").strip()
-source_schema = dbutils.widgets.get("source_schema").strip()
+source_schema = "hack_14oct"   # read-only source data
 team_schema = dbutils.widgets.get("team_schema").strip()
 team_group = dbutils.widgets.get("team_group").strip()
 
@@ -142,12 +141,26 @@ display(spark.createDataFrame(rows, "table string, source_rows long, team_rows l
 
 # COMMAND ----------
 
-# Description coverage. This is EXPECTED to be low at this point. You'll improve it in Sprint 4a (Describe your data).
+# MAGIC %md
+# MAGIC ## 6. What you've got, and what you'll need to add 💡
+# MAGIC
+# MAGIC Your tables are an exact copy of the source system. That means:
+# MAGIC - **The column names are cryptic** (`str_id`, `sku`, `qty`, `nsv`, `gp`, `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt` …).
+# MAGIC - **Some values are codes** (`fmt_cd` = HYP / SUP / CNV / WHS, `sts` = O / C, `prm_typ` = PR / MB / BN, `prm_flg` = Y / N …).
+# MAGIC - **There are no descriptions and no metric views.** You build those.
+# MAGIC
+# MAGIC The tables below show what you're starting from. Expect the dashboard AI assistant and Genie to **guess** (and often guess wrong)
+# MAGIC until you add meaning to the data.
+
+# COMMAND ----------
+
+# Description coverage: 0% is expected. Raising it is your job in Sprint 4a (Describe your data).
 display(spark.sql(f"""
     SELECT table_name,
            count(*) AS columns,
            count_if(comment IS NOT NULL AND trim(comment) <> '') AS described_columns,
-           round(100 * count_if(comment IS NOT NULL AND trim(comment) <> '') / count(*), 0) AS pct_described
+           round(100 * count_if(comment IS NOT NULL AND trim(comment) <> '') / count(*), 0) AS pct_described,
+           concat_ws(', ', collect_list(column_name)) AS columns_to_describe
     FROM {isc}.columns
     WHERE table_schema = '{team_schema}'
     GROUP BY table_name ORDER BY table_name
@@ -155,5 +168,36 @@ display(spark.sql(f"""
 
 # COMMAND ----------
 
+# Metric views in your schema: none yet. You create them in Sprint 2.
+display(spark.sql(f"""
+    SELECT count_if(table_type = 'METRIC_VIEW') AS metric_views, count_if(table_type IN ('MANAGED', 'EXTERNAL')) AS tables
+    FROM {isc}.tables WHERE table_schema = '{team_schema}'
+"""))
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ### 💡 Hints: how to get good results
+# MAGIC
+# MAGIC | If you see this… | …try this |
+# MAGIC |---|---|
+# MAGIC | The dashboard AI assistant picks the wrong column ("sales" → `gsv` instead of `nsv`) | **Add column descriptions** (Catalog Explorer → table → *AI generate* → review → save), or build the visual on a **metric view** measure |
+# MAGIC | Every widget repeats the same SQL (`SUM(gp) / SUM(nsv)`) | **Create a metric view** with a `Margin %` measure once, and reuse it in every widget |
+# MAGIC | Margin % looks wrong when you change the grouping | Define it as a **ratio measure in a metric view** (`SUM(gp) / SUM(nsv)`), not an average of percentages |
+# MAGIC | Genie doesn't know what `nsv`, `osa_pct` or `fmt_cd = 'HYP'` mean | **Describe the columns and codes** in Unity Catalog, then add **synonyms** in the Genie space |
+# MAGIC | Genie gets "last quarter" or "this year" wrong | Describe the fiscal columns in `dim_date` and add an **instruction**: the fiscal year runs March–February |
+# MAGIC | Genie joins the wrong tables | Check the **PK/FK constraints** (already copied), describe the key columns, or add the **metric view** to the space |
+# MAGIC | Genie's numbers differ from your dashboard | Point both at the **same metric view**, so they share one definition of each KPI |
+# MAGIC
+# MAGIC **Where to describe:** Catalog Explorer → `team_XX` → table → *Overview* (table description) and *Columns* (column descriptions), using
+# MAGIC **AI generate**, then **review and correct** it. Good descriptions say what the column means, its **unit and currency** (ZAR excl. VAT),
+# MAGIC the table's **grain**, what the **codes** mean, and common **synonyms**.
+# MAGIC
+# MAGIC **Where to build metric views:** Catalog Explorer → `team_XX` → *Create* → *Metric view* (or the SQL template in the attendee guide, Appendix A).
+# MAGIC Give the measures and dimensions **business names** (`Sales`, `Margin %`, `Region`), so dashboards and Genie don't have to decode `nsv` or `rgn`.
+
+# COMMAND ----------
+
 # MAGIC %md
 # MAGIC ✅ **Done.** Open **Catalog Explorer → your catalog → `team_XX`**, look at the tables and their lineage, and continue with Sprint 1.
+# MAGIC Start with a quick dashboard as it is, then improve it with metric views (Sprint 2) and descriptions (Sprint 4a), and watch the results get better.

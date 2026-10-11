@@ -30,9 +30,9 @@ Your team uses **AI Functions** from the start (not just in Sprint 5).
    ```sql
    CREATE OR REPLACE TABLE team_05.visit_notes_enriched AS
    SELECT *,
-          ai_classify(note_text, ARRAY('out of stock', 'damaged display', 'missing price tag',
+          ai_classify(nt_txt, ARRAY('out of stock', 'damaged display', 'missing price tag',
                                        'planogram issue', 'competitor activity', 'other')) AS issue_type,
-          ai_analyze_sentiment(note_text) AS sentiment
+          ai_analyze_sentiment(nt_txt) AS sentiment
    FROM team_05.visit_notes;
    ```
    > Try it on `LIMIT 100` first, then run it on all the rows. Column names are examples, so check them in Catalog Explorer.
@@ -67,7 +67,7 @@ Then rebuild the dashboard on the metric views and add an **"out-of-stock notes 
 
 ## Sprint 4a: Describe these first
 
-`visit_notes_enriched` (especially `issue_type`, `sentiment`, `note_text`), `visit_notes`, `fact_store_visits`, `dim_store`
+`visit_notes_enriched` (especially `issue_type`, `sentiment`, `nt_txt`), `visit_notes` (`vst_id`, `nt_dt`), `fact_store_visits` (`osa_pct`), `dim_store`
 
 ## Sprint 4b: Genie tuning hints
 

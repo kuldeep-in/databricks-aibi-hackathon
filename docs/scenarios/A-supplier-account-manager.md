@@ -55,7 +55,7 @@ Then rebuild the dashboard on the metric views and add **Share of category %** a
 
 ## Sprint 4a: Describe these first
 
-`fact_sales_weekly` (especially `nsv`, `gsv`, `margin`, `fy_wk`), `fact_budget_monthly`, `dim_product`, `dim_supplier`
+`fact_sales_weekly` (especially `nsv`, `gsv`, `gp`, `qty`, `wk_strt_dt`), `fact_budget_monthly` (`bgt_nsv`), `dim_product` (`brnd`, `cat`), `dim_supplier` (`tier_cd`, `cat_typ` codes), `dim_date` (`fy_cd`, `fy_wk`)
 
 ## Sprint 4b: Genie tuning hints
 

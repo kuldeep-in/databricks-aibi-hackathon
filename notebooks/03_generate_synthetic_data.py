@@ -8,15 +8,15 @@
 # MAGIC | Table | Grain | Default size |
 # MAGIC |---|---|---|
 # MAGIC | `dim_date` | day (calendar + fiscal year March–February) | ~1,100 |
-# MAGIC | `dim_store` | store (South African regions, fictional retailer groups) | 300 |
+# MAGIC | `dim_store` | store (South African regions, fictional retailer groups) | 120 |
 # MAGIC | `dim_supplier` | supplier (category type Food / Liquor / GM) | 22 |
-# MAGIC | `dim_product` | SKU (category → subcategory → brand) | 400 |
-# MAGIC | `dim_merchandiser` | field rep | ~50 |
-# MAGIC | `fact_promotions` | promotion × SKU × retailer group | ~2,000 |
-# MAGIC | `fact_sales_weekly` | week × store × SKU (ZAR, excl. VAT) | ~3.5M |
-# MAGIC | `fact_budget_monthly` | month × region × retailer group × category | ~30K |
-# MAGIC | `fact_store_visits` | merchandiser visit (OSA %, POG compliance %, share of shelf %) | ~60K |
-# MAGIC | `visit_notes` | free-text merchandiser note | ~18K |
+# MAGIC | `dim_product` | SKU (category → subcategory → brand) | 200 |
+# MAGIC | `dim_merchandiser` | field rep | ~20 |
+# MAGIC | `fact_promotions` | promotion × SKU × retailer group | ~1,000 |
+# MAGIC | `fact_sales_weekly` | week × store × SKU (ZAR, excl. VAT) | ~350K |
+# MAGIC | `fact_budget_monthly` | month × region × retailer group × category | ~10K |
+# MAGIC | `fact_store_visits` | merchandiser visit (OSA %, POG compliance %, share of shelf %) | ~30K |
+# MAGIC | `visit_notes` | free-text merchandiser note | ~9K |
 # MAGIC
 # MAGIC **Insights planted in the data** (facilitator only, so don't share them with attendees):
 # MAGIC 1. **Execution gap:** in region **KZN Inland**, OSA falls from about 90% to about 75% over the last 26 weeks, and sales drop with it. The region ends up below budget.
@@ -27,19 +27,15 @@
 # MAGIC 6. **Coverage gap:** about 4% of stores haven't been visited in the last 4 weeks.
 # MAGIC 7. **Visit notes:** out-of-stock notes cluster where OSA is low, and competitor-activity notes increase over time.
 # MAGIC
-# MAGIC Column names deliberately keep business abbreviations (`nsv`, `gsv`, `osa_pct`, `pog_comp`, `sos_pct`, `fy_wk`, `rtl_grp`), and **no
-# MAGIC descriptions are written**. Teams add them in Sprint 4a.
+# MAGIC **Column names are deliberately imperfect**, like a real source system: abbreviated and inconsistent (`str_id`, `sku`, `qty`, `nsv`, `gp`,
+# MAGIC `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt`), with **coded values** (`fmt_cd` HYP/SUP/CNV/WHS, `sts` O/C,
+# MAGIC `tier_cd` K/C/E, `cat_typ` FD/LQ/GM, `prm_typ` PR/MB/BN, `prm_flg` Y/N). **No descriptions are written.** Teams add them in
+# MAGIC Sprint 4a and build metric views in Sprint 2 to get good results. The full column dictionary is the `RENAMES` map below.
 # MAGIC The data is **deterministic** for a given seed, and it ends with the last complete week before the run date.
 
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("schema", "hack_14oct", "2. Target (source) schema")
-dbutils.widgets.text("n_stores", "300", "3. Stores")
-dbutils.widgets.text("n_skus", "400", "4. SKUs")
-dbutils.widgets.text("n_weeks", "156", "5. Weeks of history")
-dbutils.widgets.text("ranging_pct", "0.20", "6. Share of SKUs ranged per store")
-dbutils.widgets.text("seed", "42", "7. Seed")
 
 # COMMAND ----------
 
@@ -47,13 +43,14 @@ import random, datetime as dt
 from pyspark.sql import functions as F
 
 catalog = dbutils.widgets.get("catalog").strip()
-schema = dbutils.widgets.get("schema").strip()
+schema = "hack_14oct"   # target (source) schema
 
-N_STORES = int(dbutils.widgets.get("n_stores"))
-N_SKUS = int(dbutils.widgets.get("n_skus"))
-N_WEEKS = int(dbutils.widgets.get("n_weeks"))
-RANGING = float(dbutils.widgets.get("ranging_pct"))
-SEED = int(dbutils.widgets.get("seed"))
+# Fixed sizes (edit here if needed)
+N_STORES = 120       # stores
+N_SKUS = 200         # SKUs
+N_WEEKS = 156        # weeks of history (3 years)
+RANGING = 0.10       # share of SKUs ranged per store  → ~350K weekly sales rows
+SEED = 42            # same seed = same data
 rng = random.Random(SEED)
 
 DROP_REGION = "KZN Inland"     # insight 1
@@ -68,7 +65,34 @@ print(f"Target {catalog}.{schema} · weeks {START_WEEK} → {END_WEEK} · {N_STO
 def tbl(name):
     return f"`{catalog}`.`{schema}`.`{name}`"
 
+# Source-system style column names: abbreviated and inconsistent ON PURPOSE, so attendees have to describe the
+# data (Sprint 4a) and build metric views (Sprint 2) before dashboards and Genie give good answers.
+RENAMES = {
+    "dim_date": {"cal_date": "dt", "date_key": "dt_key", "week_start_date": "wk_strt_dt", "cal_year": "cal_yr", "cal_qtr": "cal_q",
+                 "cal_month": "cal_mth", "month_name": "mth_nm", "day_name": "dy_nm", "is_weekend": "wknd_flg",
+                 "fy": "fy_cd", "fy_month": "fy_mth", "fy_qtr": "fy_q", "fy_wk": "fy_wk"},
+    "dim_store": {"store_id": "str_id", "store_code": "str_cd", "store_name": "str_nm", "rtl_grp": "rtl_grp", "banner": "bnr",
+                  "store_format": "fmt_cd", "region": "rgn", "province": "prov", "city": "cty", "lat": "lat", "lon": "lng",
+                  "open_date": "opn_dt", "store_status": "sts"},
+    "dim_merchandiser": {"merchandiser_id": "rep_id", "rep_name": "rep_nm", "team_lead": "tl_nm", "region": "rgn", "start_date": "strt_dt"},
+    "dim_supplier": {"supplier_id": "supp_id", "supplier_name": "supp_nm", "supplier_tier": "tier_cd", "category_type": "cat_typ"},
+    "dim_product": {"sku_id": "sku", "sku_code": "sku_cd", "sku_name": "sku_desc", "brand": "brnd", "supplier_id": "supp_id",
+                    "category": "cat", "subcategory": "sub_cat", "pack_size": "pk_sz", "list_price": "rsp"},
+    "fact_promotions": {"promo_id": "prm_id", "promo_name": "prm_desc", "mechanic": "mech", "promo_type": "prm_typ",
+                        "discount_pct": "disc", "sku_id": "sku", "rtl_grp": "rtl_grp", "start_date": "strt_dt", "end_date": "end_dt"},
+    "fact_sales_weekly": {"week_start_date": "wk_strt_dt", "store_id": "str_id", "sku_id": "sku", "units": "qty", "gsv": "gsv",
+                          "nsv": "nsv", "cost": "cogs", "margin": "gp", "promo_flag": "prm_flg", "promo_id": "prm_id"},
+    "fact_budget_monthly": {"month_start_date": "mth_strt_dt", "region": "rgn", "rtl_grp": "rtl_grp", "category": "cat", "budget_nsv": "bgt_nsv"},
+    "fact_store_visits": {"visit_id": "vst_id", "visit_date": "vst_dt", "store_id": "str_id", "merchandiser_id": "rep_id",
+                          "duration_min": "dur", "osa_pct": "osa_pct", "pog_comp": "pog_comp", "sos_pct": "sos"},
+    "visit_notes": {"note_id": "nt_id", "visit_id": "vst_id", "store_id": "str_id", "merchandiser_id": "rep_id",
+                    "note_date": "nt_dt", "note_text": "nt_txt"},
+}
+
 def save(df, name):
+    for old, new in RENAMES.get(name, {}).items():
+        if old != new:
+            df = df.withColumnRenamed(old, new)
     df.write.mode("overwrite").option("overwriteSchema", True).saveAsTable(tbl(name))
     print(f"✅ {name}: {spark.table(tbl(name)).count():,} rows")
 
@@ -129,6 +153,7 @@ RETAILERS = {   # retailer group: (weight, [(banner, format)])
     "Umoya Wholesale":      (0.16, [("Umoya Cash & Carry", "Wholesale")]),
 }
 FORMAT = {"Hyper": (3.0, 1.6), "Super": (1.5, 1.0), "Convenience": (0.6, 0.5), "Wholesale": (2.2, 0.8)}   # (size factor, range factor)
+FORMAT_CD = {"Hyper": "HYP", "Super": "SUP", "Convenience": "CNV", "Wholesale": "WHS"}        # saved as codes
 
 FIRST = ["Thabo", "Lerato", "Sipho", "Ayanda", "Pieter", "Annelie", "Nomsa", "Kagiso", "Zanele", "Johan", "Fatima", "Ravi", "Precious",
          "Bongani", "Lindiwe", "Themba", "Karabo", "Naledi", "Mandla", "Chloe", "Ruan", "Yusuf", "Palesa", "Tshepo"]
@@ -160,8 +185,8 @@ for sid in range(1, N_STORES + 1):
     base = f"{banner} {city}"
     name_count[base] = name_count.get(base, 0) + 1
     name = base if name_count[base] == 1 else f"{base} {name_count[base]}"
-    status = "Open" if rng.random() > 0.03 else "Closed"
-    stores.append((sid, f"S{sid:05d}", name, grp, banner, fmt, region, province, city,
+    status = "O" if rng.random() > 0.03 else "C"
+    stores.append((sid, f"S{sid:05d}", name, grp, banner, FORMAT_CD[fmt], region, province, city,
                    round(lat + rng.uniform(-0.12, 0.12), 5), round(lon + rng.uniform(-0.12, 0.12), 5),
                    START_WEEK - dt.timedelta(days=rng.randint(200, 6000)), status))
     size, rangef = FORMAT[fmt]
@@ -214,7 +239,7 @@ VARIANTS = ["Original", "Lite", "Classic", "Premium", "Spicy", "Zero", "Family",
 brand_pool = rng.sample([f"{a} {n}" for a in ADJ for n in NOUN], k=len(SUPPLIERS) * 4)
 suppliers, brands_of = [], {}
 for i, (name, tier, cats, trend) in enumerate(SUPPLIERS, start=1):
-    suppliers.append((i, name, tier, CATS[cats[0]][0]))
+    suppliers.append((i, name, tier[0], {"Food": "FD", "Liquor": "LQ", "GM": "GM"}[CATS[cats[0]][0]]))
     brands_of[i] = brand_pool[(i - 1) * 4:(i - 1) * 4 + rng.randint(2, 4)]
 save(spark.createDataFrame(suppliers, "supplier_id INT, supplier_name STRING, supplier_tier STRING, category_type STRING"), "dim_supplier")
 
@@ -247,9 +272,9 @@ products_x = spark.createDataFrame(product_x, "sku_id INT, category STRING, list
 # COMMAND ----------
 
 MECHANICS = [   # (mechanic, promo type, discount %, uplift, weight). Buy 2 Get 1 Free = high uplift, negative margin (insight 2)
-    ("10% Off", "Price Reduction", 10.0, 1.15, 3), ("20% Off", "Price Reduction", 20.0, 1.45, 3),
-    ("Buy 2 Get 1 Free", "Multi-buy", 33.3, 1.95, 2), ("Multi-buy 2 for", "Multi-buy", 25.0, 1.60, 2),
-    ("Bundle Deal", "Bundle", 15.0, 1.50, 2),
+    ("10% Off", "PR", 10.0, 1.15, 3), ("20% Off", "PR", 20.0, 1.45, 3),      # prm_typ codes: PR price reduction,
+    ("Buy 2 Get 1 Free", "MB", 33.3, 1.95, 2), ("Multi-buy 2 for", "MB", 25.0, 1.60, 2),   # MB multi-buy, BN bundle
+    ("Bundle Deal", "BN", 15.0, 1.50, 2),
 ]
 retailer_names = list(RETAILERS)
 promos = []

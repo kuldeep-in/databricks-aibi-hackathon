@@ -159,9 +159,11 @@ Tell a **before → after** story:
 
 ---
 
-## Appendix A: Metric view starter template
+## Appendix A: Metric view starter (fill in the TODOs)
 
-> Column names are examples. Check the real names in **Catalog Explorer** and adjust.
+> The source columns are **cryptic on purpose** (`str_id`, `sku`, `qty`, `nsv`, `gp`, `rgn` …). A metric view is where you give them
+> **business names**. The joins and two examples are filled in. Work out the rest by looking at the tables in **Catalog Explorer**
+> (or ask the Assistant: *"what does column gp in fact_sales_weekly contain?"*).
 
 ```sql
 CREATE OR REPLACE VIEW <hack_catalog>.team_XX.mv_sales
@@ -174,33 +176,27 @@ source: <hack_catalog>.team_XX.fact_sales_weekly
 joins:
   - name: store
     source: <hack_catalog>.team_XX.dim_store
-    on: source.store_id = store.store_id
+    on: source.str_id = store.str_id
   - name: product
     source: <hack_catalog>.team_XX.dim_product
-    on: source.sku_id = product.sku_id
+    on: source.sku = product.sku
 dimensions:
   - name: Week
-    expr: source.week_start_date
+    expr: source.wk_strt_dt
   - name: Region
-    expr: store.region
-  - name: Retailer
-    expr: store.rtl_grp
-  - name: Category
-    expr: product.category
-  - name: Brand
-    expr: product.brand
+    expr: store.rgn
+  # TODO: Retailer (which dim_store column holds the retailer group?)
+  # TODO: Category and Brand (from dim_product)
 measures:
   - name: Sales
-    expr: SUM(source.nsv)
-  - name: Units
-    expr: SUM(source.units)
-  - name: Margin
-    expr: SUM(source.margin)
-  - name: Margin %
-    expr: SUM(source.margin) / NULLIF(SUM(source.nsv), 0)
+    expr: SUM(source.nsv)          # net sales value, ZAR excl. VAT
+  # TODO: Units (which column holds the units sold?)
+  # TODO: Margin (gross profit in ZAR)
+  # TODO: Margin %: a ratio of two sums, not an average
+  # STRETCH: Promo Sales, using FILTER (WHERE …) on the promotion flag
 $$;
 
-SELECT Region, MEASURE(Sales) AS sales, MEASURE(`Margin %`) AS margin_pct
+SELECT Region, MEASURE(Sales) AS sales
 FROM <hack_catalog>.team_XX.mv_sales
 GROUP BY ALL ORDER BY sales DESC;
 ```
@@ -218,7 +214,7 @@ You can also create metric views from **Catalog Explorer** (Create → Metric vi
 | Business meaning | "Net sales value after discounts and returns" |
 | Unit and currency | "in ZAR, excl. VAT", "percentage 0–100" |
 | Grain (table level) | "One row per store, SKU and week" |
-| Codes and allowed values | "`promo_flag`: Y = on promotion, N = regular price" |
+| Codes and allowed values | "`prm_flg`: Y = on promotion, N = regular price", "`fmt_cd`: HYP = hypermarket …" |
 | Abbreviations spelled out | "OSA = on-shelf availability" |
 | Synonyms | "also called availability, in-stock rate" |
 

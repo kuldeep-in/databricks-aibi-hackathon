@@ -55,7 +55,7 @@ Then rebuild the dashboard on the metric views and add an **"uplift vs margin by
 
 ## Sprint 4a: Describe these first
 
-`fact_promotions` (mechanic, discount %, start/end dates), `fact_sales_weekly` (`promo_flag`, `nsv`, `margin`), `dim_product`
+`fact_promotions` (`mech`, `prm_typ` codes, `disc`, `strt_dt`, `end_dt`), `fact_sales_weekly` (`prm_flg`, `prm_id`, `nsv`, `gp`), `dim_product`
 
 ## Sprint 4b: Genie tuning hints
 

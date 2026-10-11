@@ -55,7 +55,7 @@ Then rebuild the dashboard on the metric views and add an **"OSA vs sales growth
 
 ## Sprint 4a: Describe these first
 
-`fact_store_visits` (especially `osa_pct`, `pog_comp`, share of shelf, duration), `dim_merchandiser`, `dim_store`
+`fact_store_visits` (especially `osa_pct`, `pog_comp`, `sos`, `dur`), `dim_merchandiser` (`rep_nm`, `tl_nm`), `dim_store` (`rgn`, `fmt_cd`, `sts` codes)
 
 ## Sprint 4b: Genie tuning hints
 

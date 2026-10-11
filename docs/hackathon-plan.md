@@ -66,8 +66,7 @@ All five challenge cards (section 8) are personas inside this one theme, so ever
 <hack_catalog>                          one catalog for the whole event
 ├── hack_14oct         (READ-ONLY)     ← facilitator loads the sample data here (single source of truth), with minimal descriptions on purpose
 │     ├── dim_* / fact_* tables
-│     ├── visit_notes
-│     └── Volume: landing/              ← optional CSV copies for the bonus "ingest it yourself" challenge
+│     └── visit_notes
 ├── facilitator_kit    (FACILITATOR ONLY) ← answer keys: fully described reference tables, metric views, Genie config, starter dashboards
 ├── team_01            (OWNED BY TEAM)  ← created by the team on the day; data copied from hack_14oct
 ├── team_02
@@ -117,12 +116,10 @@ Use one existing catalog that the customer assigns, and create `hack_14oct`, `fa
 
 ## 3. Sample data design
 
-> **Status:** the facilitator prepares the data **files** (CSV, Parquet or JSON) separately. They aren't generated as part of this plan.
-> **Step 3 of the `00_facilitator_runbook` notebook loads them:** it creates the Volume `hack_14oct.landing`, you upload the files (file name = table name),
-> and it loads each file into a Delta table in `hack_14oct` and checks the data contract. Each team then copies the tables from `hack_14oct` into its
-> own schema with `01_team_setup`.
-> The tables below are the **target data contract**. The attendee guide, metric view template, Genie test questions and app prompts all refer to
-> these names, so keep them, or update those documents if the final names differ.
+> **Status:** the data is **synthetic and generated** by the `03_generate_synthetic_data` notebook, which Step 3 of
+> `00_facilitator_runbook` calls. It writes the tables below **directly as Delta tables** in `hack_14oct`. Each team then copies them
+> into its own schema with `01_team_setup`.
+> The attendee guide, metric view template, Genie test questions and app prompts refer to these table and column names.
 
 The data needs to be *realistic and full of insight* (seasonality, under-performing regions, promo uplift, out-of-stock patterns) so that Genie
 and the dashboards have something to find.
@@ -132,15 +129,15 @@ and the dashboards have something to find.
 | Table | Grain | Approx. rows | Purpose |
 |---|---|---|---|
 | `dim_date` | day (week/month/quarter/fiscal attributes) | ~1,100 (3 yrs) | Time intelligence |
-| `dim_store` | store | ~1,500 | Retailer group, banner, region, province, city, format, lat/long |
-| `dim_product` | SKU | ~3,000 | Category → subcategory → brand → SKU, pack size, supplier |
-| `dim_supplier` | supplier | ~60 | Supplier name, tier, category type (Food / GM / Liquor) |
-| `dim_merchandiser` | field rep | ~200 | Rep name, team lead, region |
-| `fact_sales_weekly` | week × store × SKU | ~3–5M | Units, sales value, cost, margin, promo flag |
-| `fact_budget_monthly` | month × retailer × category | ~20K | Budget vs actual |
-| `fact_promotions` | promo × SKU × store-group | ~5K | Promo type, mechanic, start/end, discount % |
-| `fact_store_visits` | visit | ~150K | Rep, store, duration, on-shelf availability (OSA) %, planogram compliance %, share-of-shelf % |
-| `visit_notes` | visit (free text) | ~20K | Merchandiser comments, for `ai_query` / `ai_classify` challenges |
+| `dim_store` | store | 120 | Retailer group, banner, region, province, city, format, lat/long |
+| `dim_product` | SKU | 200 | Category → subcategory → brand → SKU, pack size, supplier |
+| `dim_supplier` | supplier | 22 | Supplier name, tier, category type (Food / GM / Liquor) |
+| `dim_merchandiser` | field rep | ~20 | Rep name, team lead, region |
+| `fact_sales_weekly` | week × store × SKU (156 weeks) | ~350K | Units, sales value, cost, margin, promo flag |
+| `fact_budget_monthly` | month × region × retailer × category | ~10K | Budget vs actual |
+| `fact_promotions` | promo × SKU × retailer group | ~1,000 | Promo type, mechanic, start/end, discount % |
+| `fact_store_visits` | visit | ~30K | Rep, store, duration, on-shelf availability (OSA) %, planogram compliance %, share-of-shelf % |
+| `visit_notes` | visit (free text) | ~9K | Merchandiser comments, for `ai_query` / `ai_classify` challenges |
 
 **Insights to plant deliberately in the data** (they make the demos land):
 - A region where sales drop because OSA falls below 85%.
@@ -150,7 +147,7 @@ and the dashboards have something to find.
 - **"Trap" questions for Genie:** ambiguous terms such as "sales" (gross or net?), "last quarter" (calendar or fiscal?), and "top stores"
   (by sales or by growth?). The raw-table Genie gets these wrong, and the tuned Genie gets them right. That's the before/after story.
 
-**Data preparation checklist (facilitator, before T-3 days):** the Delta tables are loaded into `hack_14oct`, PK/FK constraints are added, column names
+**Data checklist (facilitator, before T-3 days):** run Step 3 (generate), check that the data contract is all ✅, add the PK/FK constraints (Step 5), and build the fully described copy in `facilitator_kit` (Step 6).
 keep the business abbreviations, the insights are planted, there are no real client names, and the fully described copy is in `facilitator_kit`.
 
 ### 3.1a Description strategy: undocumented on purpose
@@ -159,7 +156,7 @@ Writing descriptions is a **key capability to showcase**, so the `hack_14oct` ta
 
 | Where | What it contains | Why |
 |---|---|---|
-| `hack_14oct.*` (what teams copy) | A one-line table comment at most, **no column descriptions**, and a few realistic business abbreviations in column names (`nsv`, `gsv`, `osa_pct`, `pog_comp`, `fy_wk`, `rtl_grp`) | Like real source systems. Genie and the Assistant must guess, which gives a clear baseline |
+| `hack_14oct.*` (what teams copy) | **No descriptions and no metric views.** Cryptic, inconsistent column names (`str_id`, `sku`, `qty`, `nsv`, `gp`, `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt`) and coded values (`fmt_cd` HYP/SUP/CNV/WHS, `sts` O/C, `prm_typ` PR/MB/BN) | Like real source systems. Dashboards and Genie must guess until teams describe the data and build metric views, which gives a clear baseline |
 | `facilitator_kit.*` (answer key) | The same tables with full table and column descriptions, synonyms and tags | Used to mark team descriptions, and as a fallback if a team runs out of time |
 
 This makes the impact of descriptions **measurable**: teams record their Genie score before and after describing the data (section 5).
@@ -221,7 +218,7 @@ same thing everywhere.
 | **L4: Make it discoverable** | Add comments, display names and synonyms to the measures and dimensions | Genie and dashboard users understand the fields |
 | **L5: Reuse it** | Switch the dashboard datasets to the metric views, and add the metric views to the Genie space | The before/after comparison for the demo |
 
-### Starter template (handed out in the attendee guide)
+### Answer key (attendees get a partly filled starter with TODOs in the attendee guide, Appendix A)
 
 ```sql
 CREATE OR REPLACE VIEW <hack_catalog>.team_03.mv_sales
@@ -234,32 +231,32 @@ source: <hack_catalog>.team_03.fact_sales_weekly
 joins:
   - name: store
     source: <hack_catalog>.team_03.dim_store
-    on: source.store_id = store.store_id
+    on: source.str_id = store.str_id
   - name: product
     source: <hack_catalog>.team_03.dim_product
-    on: source.sku_id = product.sku_id
+    on: source.sku = product.sku
 dimensions:
   - name: Week
-    expr: source.week_start_date
+    expr: source.wk_strt_dt
   - name: Region
-    expr: store.region
+    expr: store.rgn
   - name: Retailer
-    expr: store.retailer_group
+    expr: store.rtl_grp
   - name: Category
-    expr: product.category
+    expr: product.cat
   - name: Brand
-    expr: product.brand
+    expr: product.brnd
 measures:
   - name: Sales
-    expr: SUM(source.sales_value)
+    expr: SUM(source.nsv)
   - name: Units
-    expr: SUM(source.units)
+    expr: SUM(source.qty)
   - name: Margin
-    expr: SUM(source.margin_value)
+    expr: SUM(source.gp)
   - name: Margin %
-    expr: SUM(source.margin_value) / NULLIF(SUM(source.sales_value), 0)
+    expr: SUM(source.gp) / NULLIF(SUM(source.nsv), 0)
   - name: Promo Sales
-    expr: SUM(source.sales_value) FILTER (WHERE source.promo_flag)
+    expr: SUM(source.nsv) FILTER (WHERE source.prm_flg = 'Y')
 $$;
 
 -- Use it
@@ -270,7 +267,7 @@ ORDER BY sales DESC;
 ```
 
 > Teams can also build metric views in the **Catalog Explorer UI** (with the Assistant's help) instead of writing YAML. Both routes are valid.
-> The column names above are illustrative, and the final template will match the prepared data.
+> Column names match `03_generate_synthetic_data` (cryptic on purpose; see its `RENAMES` map).
 
 ---
 
@@ -459,7 +456,6 @@ GRANT USE CATALOG, CREATE SCHEMA ON CATALOG <hack_catalog> TO `<hackathon_partic
 
 -- Source schema: read-only for participants
 GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.hack_14oct TO `<hackathon_participants>`;
-GRANT READ VOLUME ON VOLUME <hack_catalog>.hack_14oct.landing TO `<hackathon_participants>`;   -- optional bonus
 
 -- facilitator_kit: no grants to participants (answer keys)
 ```
@@ -479,7 +475,7 @@ Team schemas need **no facilitator grants**, because each team owns its schema. 
 databricks-aibi-hackathon/
 ├── hackathon-plan.md              ← this file
 ├── notebooks/                     ← import into your workspace (keep docs/ next to them)
-│   ├── 00_facilitator_runbook     ← ✅ created: step-by-step setup and test, including Step 3 data load (Volume → hack_14oct)
+│   ├── 00_facilitator_runbook     ← ✅ created: step-by-step setup and test, including Step 3 synthetic data as Delta tables in hack_14oct
 │   ├── 01_team_setup              ← ✅ created: teams copy every table from hack_14oct to team_XX
 │   └── 02_apply_reference_descriptions ← ✅ created: fallback that applies the answer-key descriptions to a team schema
 │       (grants, answer-key build, metric view reference and smoke tests are all steps inside 00_facilitator_runbook)

@@ -32,7 +32,7 @@ docs/
     ├── D-client-executive.md
     └── E-insights-analyst.md
 notebooks/
-├── 00_facilitator_runbook.py  # step-by-step setup and test: schemas, data load (Volume → hack_14oct), constraints, answer key, grants, dry run, cleanup
+├── 00_facilitator_runbook.py  # step-by-step setup and test: schemas, synthetic data as Delta tables in hack_14oct, constraints, answer key, grants, testing
 ├── 01_team_setup.py           # run by each team: create team_XX and deep clone every table from hack_14oct
 ├── 02_apply_reference_descriptions.py  # facilitator fallback: apply the answer-key descriptions to a team schema
 └── 03_generate_synthetic_data.py       # synthetic, fictional dataset generator (called from runbook Step 3)
@@ -42,8 +42,8 @@ notebooks/
 
 1. Import `notebooks/` into your Databricks workspace (keep `docs/` alongside them), or clone this repo as a Git folder.
 2. Open `00_facilitator_runbook`, set the `catalog` widget (the source schema defaults to `hack_14oct`), and run it **step by step**.
-3. Step 3 generates the synthetic dataset into `hack_14oct` (default). Alternatively, load your own CSV/Parquet/JSON files (file name = table name).
-4. Do a dry run as a test team (Step 8), then test every sprint (Step 9).
+3. Step 3 generates the synthetic dataset as Delta tables in `hack_14oct`. Make that schema read-only for participants.
+4. Test as an attendee (Step 8): run `01_team_setup` yourself into a team schema, then follow the attendee guide for one scenario.
 5. Fill in the placeholders in `docs/attendee-guide.md` (workspace URL, catalog, warehouses, notebook path) and share it with attendees.
 
 > The data isn't included. Use **fictional** retailers, suppliers and brands only.

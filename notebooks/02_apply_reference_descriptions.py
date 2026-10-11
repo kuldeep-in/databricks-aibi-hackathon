@@ -6,6 +6,7 @@
 # MAGIC It copies the table and column descriptions from the answer-key schema (`facilitator_kit`) onto the matching tables
 # MAGIC in a team schema.
 # MAGIC
+# MAGIC Set the `mode` variable in the code cell:
 # MAGIC - `missing_only` (default): only fills in descriptions the team hasn't written yet, so the team's own work is kept.
 # MAGIC - `overwrite`: replaces every description with the reference version.
 # MAGIC
@@ -14,16 +15,14 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("kit_schema", "<facilitator_kit_schema>", "2. Reference (answer-key) schema")
-dbutils.widgets.text("team_schema", "team_XX", "3. Team schema")
-dbutils.widgets.dropdown("mode", "missing_only", ["missing_only", "overwrite"], "4. Mode")
+dbutils.widgets.text("team_schema", "team_XX", "2. Team schema")
 
 # COMMAND ----------
 
 catalog = dbutils.widgets.get("catalog").strip()
-kit_schema = dbutils.widgets.get("kit_schema").strip()
+kit_schema = "facilitator_kit"   # answer-key schema
 team_schema = dbutils.widgets.get("team_schema").strip()
-mode = dbutils.widgets.get("mode")
+mode = "missing_only"            # or "overwrite" to replace the team's own descriptions
 
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)

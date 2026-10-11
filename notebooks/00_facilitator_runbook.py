@@ -9,17 +9,16 @@
 # MAGIC
 # MAGIC | Step | What | Changes anything? |
 # MAGIC |---|---|---|
-# MAGIC | 0 | Configure the placeholders (catalog, schemas, groups) | No |
+# MAGIC | 0 | Configure (catalog widget, fixed settings) | No |
 # MAGIC | 1 | Pre-flight checks (identity, catalog, warehouses, AI Functions, Apps) | No |
 # MAGIC | 2 | Create the source and facilitator-kit schemas | **Yes** |
-# MAGIC | 3 | **Load the data:** generate the synthetic dataset (default), or download or upload files and load them, then check the data contract | **Yes** |
+# MAGIC | 3 | **Create the data:** generate the synthetic dataset as Delta tables in `hack_14oct`, then check the data contract | **Yes** |
 # MAGIC | 4 | Check the description strategy (the source should be almost undocumented) | Optional |
 # MAGIC | 5 | Add PK/FK constraints to the source tables | **Yes** |
 # MAGIC | 6 | Build the facilitator kit: clone, reference descriptions, reference metric views | **Yes** |
 # MAGIC | 7 | Grant permissions to participants | **Yes** |
-# MAGIC | 8 | Dry run as a test team: `01_team_setup` **copies every object from the source schema into a team schema** | **Yes** |
-# MAGIC | 9 | Test every sprint (dashboard, metric view, descriptions, Genie, app) | Manual |
-# MAGIC | 10 | Cleanup of the test team (guarded) | **Yes (destructive)** |
+# MAGIC | 8 | **Test as an attendee:** open `01_team_setup` yourself (it copies every table from `hack_14oct` into a team schema), then test every sprint | Manual |
+# MAGIC | 9 | Clean up the team schema you tested with | Manual |
 # MAGIC
 # MAGIC **Related notebooks in this folder:**
 # MAGIC - `01_team_setup`: run by each team in Sprint 0. It creates `team_XX` and copies every table (with constraints) from the source schema into it.
@@ -33,39 +32,33 @@
 # MAGIC %md
 # MAGIC ## Step 0 · Configuration (placeholders)
 # MAGIC
-# MAGIC Fill in the widgets at the top of the notebook. Replace every `<...>` value before you continue.
+# MAGIC **Widgets (fill in at the top of the notebook):**
 # MAGIC
-# MAGIC | Widget | Meaning | Suggested value |
+# MAGIC | Widget | Meaning |
+# MAGIC |---|---|
+# MAGIC | `catalog` | The one catalog for the whole hackathon. **Required** |
+# MAGIC | `participants_group` | The account group that contains all attendees. Leave blank while testing alone (Step 7 is then skipped) |
+# MAGIC
+# MAGIC **Fixed settings (variables in the next cell; edit there only if needed):**
+# MAGIC
+# MAGIC | Variable | Value | Meaning |
 # MAGIC |---|---|---|
-# MAGIC | `catalog` | The one catalog for the whole hackathon | *your choice* |
-# MAGIC | `source_schema` | The read-only source data schema that teams copy from | `hack_14oct` (default) |
-# MAGIC | `kit_schema` | The facilitator-only answer key (described tables, reference metric views) | for example `facilitator_kit` |
-# MAGIC | `participants_group` | The account group that contains all attendees (leave blank while testing alone) | for example `hackathon_participants` |
-# MAGIC | `test_team_schema` | The team schema used for your dry run | `team_99` |
-# MAGIC | `test_team_group` | An optional group to own the test team schema (blank = you) | blank |
-# MAGIC | `github_repo` / `github_branch` / `github_data_path` | The public GitHub repo, branch and folder that the data files are downloaded from (Step 3b) | `kuldeep-in/databricks-aibi-hackathon` / `main` / `data` |
+# MAGIC | `source_schema` | `hack_14oct` | The read-only source data schema that teams copy from |
+# MAGIC | `kit_schema` | `facilitator_kit` | The facilitator-only answer key (described tables, reference metric views) |
 
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("source_schema", "hack_14oct", "2. Source schema")
-dbutils.widgets.text("kit_schema", "<facilitator_kit_schema>", "3. Facilitator kit schema")
-dbutils.widgets.text("participants_group", "", "4. Participants group (optional)")
-dbutils.widgets.text("test_team_schema", "team_99", "5. Test team schema")
-dbutils.widgets.text("test_team_group", "", "6. Test team group (optional)")
-dbutils.widgets.text("confirm_cleanup", "", "7. Cleanup confirmation (Step 10)")
-dbutils.widgets.text("github_repo", "kuldeep-in/databricks-aibi-hackathon", "8. GitHub repo (owner/name) for data files")
-dbutils.widgets.text("github_branch", "main", "9. GitHub branch")
-dbutils.widgets.text("github_data_path", "data", "10. Data folder in the repo")
+dbutils.widgets.text("participants_group", "", "2. Participants group (optional)")
 
 # COMMAND ----------
 
 catalog = dbutils.widgets.get("catalog").strip()
-source_schema = dbutils.widgets.get("source_schema").strip()
-kit_schema = dbutils.widgets.get("kit_schema").strip()
 participants_group = dbutils.widgets.get("participants_group").strip()
-test_team_schema = dbutils.widgets.get("test_team_schema").strip()
-test_team_group = dbutils.widgets.get("test_team_group").strip()
+
+# Fixed settings
+source_schema = "hack_14oct"          # read-only source data (make it read-only for participants)
+kit_schema = "facilitator_kit"        # facilitator-only answer key
 
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)
@@ -74,8 +67,8 @@ def lit(text):
     return "'" + text.replace("\\", "\\\\").replace("'", "\\'") + "'"
 
 isc = f"{q(catalog)}.information_schema"
-SRC, KIT, TEST = q(catalog, source_schema), q(catalog, kit_schema), q(catalog, test_team_schema)
-print(f"Catalog      : {catalog}\nSource       : {SRC}\nKit          : {KIT}\nTest team    : {TEST}\nParticipants : {participants_group or '(not set: testing alone)'}")
+SRC, KIT = q(catalog, source_schema), q(catalog, kit_schema)
+print(f"Catalog      : {catalog}\nSource       : {SRC}\nKit          : {KIT}\nParticipants : {participants_group or '(not set: testing alone)'}")
 
 # COMMAND ----------
 
@@ -146,168 +139,41 @@ display(spark.sql(f"SHOW SCHEMAS IN {q(catalog)}"))
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 3 · Load the data into the source schema ⚠️ changes things
+# MAGIC ## Step 3 · Create the data as Delta tables in `hack_14oct` ⚠️ changes things
 # MAGIC
-# MAGIC The hackathon data goes into the source schema as Delta tables. There are three ways to get it there:
-# MAGIC - **Option A (default): generate it.** `03_generate_synthetic_data` writes a fully synthetic, fictional dataset straight into the
-# MAGIC   source schema, with the insights already planted. Run cell **3-A**, then skip to **3e**.
-# MAGIC - **Option B: download files** from the `data/` folder of a public GitHub repo (cell 3b), then load them with 3c–3d.
-# MAGIC - **Option C: upload your own files** to the Volume by hand, then load them with 3c–3d.
-# MAGIC
-# MAGIC **Ground rules for your files:** **fictional** retailers, suppliers and brands only, ZAR, South African regions, a March–February
-# MAGIC fiscal year, and business abbreviations kept in the column names (`nsv`, `osa_pct`, `pog_comp`, `fy_wk`, `rtl_grp`). Plant the
-# MAGIC insights from `docs/hackathon-plan.md` §3.1 (the OSA < 85% region, a loss-making promo mechanic, seasonality, and so on).
-# MAGIC Convert any Excel files to CSV or Parquet first.
-# MAGIC
-# MAGIC | Sub-step | What | Changes anything? |
-# MAGIC |---|---|---|
-# MAGIC | **3-A** | **Option A:** run the synthetic data generator (about 5–10 min on serverless) | **Yes** |
-# MAGIC | 3a | Create the landing Volume `hack_14oct.landing` | **Yes** |
-# MAGIC | 3a–3d | *Options B and C only:* create the landing Volume, get the files into it (**B:** download from GitHub, **C:** upload by hand in Catalog Explorer), preview them, and load them | **Yes** |
-# MAGIC | 3c | List the files and preview how they map to table names | No |
-# MAGIC | 3d | Load every file into a Delta table (overwrite) | **Yes** |
-# MAGIC | 3e | Check the data contract | No |
-# MAGIC
-# MAGIC **File naming = table naming:** `fact_sales_weekly.csv` → table `fact_sales_weekly`. A **folder** of files also works
-# MAGIC (`fact_sales_weekly/part-0001.parquet`, …), which is handy for big facts. Column names are cleaned to `lower_snake_case`.
-# MAGIC
-# MAGIC *Already loaded the tables another way?* Skip 3a–3d and go straight to **3e**.
+# MAGIC **3a** runs `03_generate_synthetic_data`, which writes a fully synthetic, fictional dataset **straight into Delta tables** in the source
+# MAGIC schema (10 tables, about 350K weekly sales rows over 156 weeks, insights planted, **no descriptions and no metric views**). It takes a few minutes on serverless.
+# MAGIC Re-running it overwrites the tables with the same data (fixed seed). **3b** checks the result.
 
 # COMMAND ----------
 
-# 3-A · Option A (default): generate the synthetic dataset into the source schema (overwrites the generated tables)
-# Sizes can be changed in the generator's widgets. The defaults give about 3.5M weekly sales rows over 156 weeks.
-result = dbutils.notebook.run("./03_generate_synthetic_data", 3600, {"catalog": catalog, "schema": source_schema})
+# 3a · generate the synthetic dataset as Delta tables in the source schema
+result = dbutils.notebook.run("./03_generate_synthetic_data", 3600, {"catalog": catalog})
 print(result)
-
-# COMMAND ----------
-
-# 3a · landing Volume for the source files
-spark.sql(f"CREATE VOLUME IF NOT EXISTS {q(catalog, source_schema, 'landing')} COMMENT 'Hackathon source files (CSV/Parquet/JSON), loaded into the source schema by Step 3d'")
-LANDING = f"/Volumes/{catalog}/{source_schema}/landing"
-print(f"✅ Upload your files to: {LANDING}\n   (Catalog Explorer → {catalog} → {source_schema} → Volumes → landing → Upload to this volume)")
-
-# COMMAND ----------
-
-# 3b · Option B: download the data files from the public GitHub repo into the landing Volume
-# (Option C: skip this cell and upload the files by hand in Catalog Explorer.)
-# Needs outbound internet access from the compute to api.github.com and raw.githubusercontent.com.
-import os, requests
-
-GH_REPO = dbutils.widgets.get("github_repo").strip()
-GH_BRANCH = dbutils.widgets.get("github_branch").strip()
-GH_PATH = dbutils.widgets.get("github_data_path").strip().strip("/")
-DATA_EXT = (".csv", ".parquet", ".json")
-
-def gh_list(path):
-    """Recursively list the data files under `path` in the repo, as (relative_path, download_url, size)."""
-    r = requests.get(f"https://api.github.com/repos/{GH_REPO}/contents/{path}", params={"ref": GH_BRANCH}, timeout=30)
-    r.raise_for_status()
-    out = []
-    for item in r.json():
-        if item["type"] == "dir":
-            out += gh_list(item["path"])
-        elif item["name"].lower().endswith(DATA_EXT):
-            out.append((item["path"][len(GH_PATH) + 1:], item["download_url"], item["size"]))
-    return out
-
-files = gh_list(GH_PATH)
-if not files:
-    raise ValueError(f"No CSV/Parquet/JSON files found in github.com/{GH_REPO}/tree/{GH_BRANCH}/{GH_PATH}")
-
-for rel, url, size in files:
-    target = f"{LANDING}/{rel}"
-    os.makedirs(os.path.dirname(target), exist_ok=True)
-    with requests.get(url, stream=True, timeout=300) as resp:
-        resp.raise_for_status()
-        with open(target, "wb") as fh:
-            for chunk in resp.iter_content(chunk_size=8 * 1024 * 1024):
-                fh.write(chunk)
-    print(f"✅ {rel} ({size / 1_048_576:.1f} MB) → {target}")
-
-print(f"\nDownloaded {len(files)} file(s) from github.com/{GH_REPO} ({GH_BRANCH}/{GH_PATH})")
-
-# COMMAND ----------
-
-# 3c · list the files and preview the file → table mapping (read-only)
-import re
-
-FORMATS = {".csv": "csv", ".parquet": "parquet", ".json": "json"}
-
-def clean_name(name):
-    return re.sub(r"_+", "_", re.sub(r"[^0-9a-zA-Z]+", "_", name.strip())).strip("_").lower()
-
-def detect(entry):
-    """Return (table_name, format, path) for a file or a folder in the landing Volume, or None if unsupported."""
-    name = entry.name.rstrip("/")
-    if entry.isDir():
-        files = [f for f in dbutils.fs.ls(entry.path) if not f.name.startswith(("_", "."))]
-        exts = {("." + f.name.rsplit(".", 1)[-1].lower()) for f in files if "." in f.name}
-        fmt = next((FORMATS[e] for e in exts if e in FORMATS), None)
-        return (clean_name(name), fmt, entry.path) if fmt else None
-    stem, _, ext = name.rpartition(".")
-    fmt = FORMATS.get("." + ext.lower())
-    return (clean_name(stem), fmt, entry.path) if fmt else None
-
-entries = [e for e in dbutils.fs.ls(LANDING) if not e.name.startswith(("_", "."))]
-plan = [d for d in (detect(e) for e in entries) if d]
-skipped = [e.name for e in entries if not detect(e)]
-
-if not plan:
-    print(f"⚠️  No CSV/Parquet/JSON files found in {LANDING}. Upload your files first (3b).")
-else:
-    display(spark.createDataFrame(plan, "table string, format string, path string"))
-if skipped:
-    print(f"ℹ️  Skipped (unsupported format): {skipped}")
-
-# COMMAND ----------
-
-# 3d · load every file/folder into a Delta table in the source schema (overwrites existing tables of the same name)
-ONLY_TABLES = []   # optional: restrict to these tables, for example ["fact_sales_weekly"]; empty = load all
-
-def read_source(fmt, path):
-    reader = spark.read.format(fmt)
-    if fmt == "csv":
-        reader = reader.option("header", True).option("inferSchema", True).option("multiLine", True).option("escape", '"')
-    return reader.load(path)
-
-loaded_summary = []
-for table, fmt, path in plan:
-    if ONLY_TABLES and table not in ONLY_TABLES:
-        continue
-    df = read_source(fmt, path)
-    df = df.toDF(*[clean_name(c) for c in df.columns])
-    (df.write.mode("overwrite").option("overwriteSchema", True)
-       .saveAsTable(q(catalog, source_schema, table)))
-    n = spark.table(q(catalog, source_schema, table)).count()
-    loaded_summary.append((table, fmt, len(df.columns), n))
-    print(f"✅ {table}: {n:,} rows, {len(df.columns)} columns")
-
-if loaded_summary:
-    display(spark.createDataFrame(loaded_summary, "table string, format string, columns int, rows long"))
+display(spark.sql(f"SHOW TABLES IN {SRC}"))
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **3e · Check the data contract (read-only).** This compares what's loaded with the contract that the attendee documents,
+# MAGIC **3b · Check the data contract (read-only).** This compares what's loaded with the contract that the attendee documents,
 # MAGIC metric view template and app prompts use.
-# MAGIC **Done when:** every table is ✅. A missing column is a ⚠️ warning. Either rename it in your file and re-run 3d, or update the
+# MAGIC **Done when:** every table is ✅. A missing column is a ⚠️ warning. Either change the generator and re-run 3a, or update the
 # MAGIC attendee docs and templates to match.
 
 # COMMAND ----------
 
 # Data contract: table -> columns the hackathon materials refer to (edit to match your final data)
 DATA_CONTRACT = {
-    "dim_date":            ["week_start_date", "fy_wk"],
-    "dim_store":           ["store_id", "region", "rtl_grp"],
-    "dim_product":         ["sku_id", "category", "brand"],
-    "dim_supplier":        [],
-    "dim_merchandiser":    [],
-    "fact_sales_weekly":   ["store_id", "sku_id", "week_start_date", "nsv", "units", "margin", "promo_flag"],
-    "fact_budget_monthly": [],
-    "fact_promotions":     [],
-    "fact_store_visits":   ["store_id", "osa_pct", "pog_comp"],
-    "visit_notes":         ["note_text"],
+    "dim_date":            ["dt", "wk_strt_dt", "fy_cd", "fy_wk"],
+    "dim_store":           ["str_id", "rgn", "rtl_grp", "fmt_cd", "prov"],
+    "dim_product":         ["sku", "cat", "brnd", "supp_id", "rsp"],
+    "dim_supplier":        ["supp_id", "supp_nm", "cat_typ"],
+    "dim_merchandiser":    ["rep_id", "rep_nm"],
+    "fact_sales_weekly":   ["wk_strt_dt", "str_id", "sku", "qty", "gsv", "nsv", "cogs", "gp", "prm_flg", "prm_id"],
+    "fact_budget_monthly": ["mth_strt_dt", "rgn", "rtl_grp", "cat", "bgt_nsv"],
+    "fact_promotions":     ["prm_id", "mech", "prm_typ", "disc", "sku", "rtl_grp", "strt_dt", "end_dt"],
+    "fact_store_visits":   ["vst_id", "vst_dt", "str_id", "rep_id", "osa_pct", "pog_comp", "sos"],
+    "visit_notes":         ["nt_id", "vst_id", "nt_txt"],
 }
 
 loaded = {}
@@ -371,24 +237,24 @@ else:
 
 # COMMAND ----------
 
-PRIMARY_KEYS = {          # table -> [pk columns]   (matches 03_generate_synthetic_data; edit if you load your own data)
-    "dim_date":          ["cal_date"],
-    "dim_store":         ["store_id"],
-    "dim_product":       ["sku_id"],
-    "dim_supplier":      ["supplier_id"],
-    "dim_merchandiser":  ["merchandiser_id"],
-    "fact_promotions":   ["promo_id"],
-    "fact_store_visits": ["visit_id"],
+PRIMARY_KEYS = {          # table -> [pk columns]   (matches 03_generate_synthetic_data)
+    "dim_date":          ["dt"],
+    "dim_store":         ["str_id"],
+    "dim_product":       ["sku"],
+    "dim_supplier":      ["supp_id"],
+    "dim_merchandiser":  ["rep_id"],
+    "fact_promotions":   ["prm_id"],
+    "fact_store_visits": ["vst_id"],
 }
 FOREIGN_KEYS = [          # (child table, [child cols], parent table, [parent cols])
-    ("fact_sales_weekly", ["store_id"],        "dim_store",         ["store_id"]),
-    ("fact_sales_weekly", ["sku_id"],          "dim_product",       ["sku_id"]),
-    ("fact_sales_weekly", ["week_start_date"], "dim_date",          ["cal_date"]),
-    ("dim_product",       ["supplier_id"],     "dim_supplier",      ["supplier_id"]),
-    ("fact_promotions",   ["sku_id"],          "dim_product",       ["sku_id"]),
-    ("fact_store_visits", ["store_id"],        "dim_store",         ["store_id"]),
-    ("fact_store_visits", ["merchandiser_id"], "dim_merchandiser",  ["merchandiser_id"]),
-    ("visit_notes",       ["visit_id"],        "fact_store_visits", ["visit_id"]),
+    ("fact_sales_weekly", ["str_id"],     "dim_store",         ["str_id"]),
+    ("fact_sales_weekly", ["sku"],        "dim_product",       ["sku"]),
+    ("fact_sales_weekly", ["wk_strt_dt"], "dim_date",          ["dt"]),
+    ("dim_product",       ["supp_id"],    "dim_supplier",      ["supp_id"]),
+    ("fact_promotions",   ["sku"],        "dim_product",       ["sku"]),
+    ("fact_store_visits", ["str_id"],     "dim_store",         ["str_id"]),
+    ("fact_store_visits", ["rep_id"],     "dim_merchandiser",  ["rep_id"]),
+    ("visit_notes",       ["vst_id"],     "fact_store_visits", ["vst_id"]),
 ]
 
 def run(sql, label):
@@ -414,6 +280,10 @@ display(spark.sql(f"SELECT table_name, constraint_name, constraint_type FROM {is
 # MAGIC %md
 # MAGIC ## Step 6 · Build the facilitator kit (answer key) ⚠️ changes things
 # MAGIC
+# MAGIC > **Optional, facilitator only.** The answer key lives only in `facilitator_kit`, never in `hack_14oct` or the team schemas, so
+# MAGIC > attendees start with **no descriptions and no metric views** and build their own. Skip this step if you don't want an answer key
+# MAGIC > (then `02_apply_reference_descriptions` has nothing to copy).
+# MAGIC
 # MAGIC **6a.** Clone every source table into the kit schema.
 # MAGIC **6b.** Add **reference descriptions** to the kit tables. You can edit the dictionary below, *or* open each kit table in Catalog Explorer,
 # MAGIC use **AI generate**, and correct the result. These are used to score teams, and by `02_apply_reference_descriptions`.
@@ -434,41 +304,85 @@ for t in src_tables:
 
 # 6b · reference descriptions (edit or extend; columns that don't exist are skipped)
 DESCRIPTIONS = {
-    "fact_sales_weekly": {
-        "_table": "Weekly sell-out (point-of-sale) sales. One row per store, SKU and week. Values in ZAR excl. VAT.",
-        "store_id": "Store identifier. Joins to dim_store.store_id.",
-        "sku_id": "Product (SKU) identifier. Joins to dim_product.sku_id.",
-        "week_start_date": "First day (Monday) of the sales week.",
-        "nsv": "Net sales value in ZAR excl. VAT, after discounts and returns. Also called sales, net sales or NSV. The default meaning of 'sales'.",
-        "gsv": "Gross sales value in ZAR excl. VAT, before discounts. Also called gross sales or GSV.",
-        "units": "Number of consumer units sold.",
-        "margin": "Gross margin in ZAR (net sales value minus cost of goods).",
-        "promo_flag": "Y if the SKU was on promotion in that store and week, N if it was at regular price.",
+    "dim_date": {
+        "_table": "Calendar. One row per day, with calendar and fiscal attributes. The fiscal year runs 1 March to end of February.",
+        "dt": "Calendar date. Primary key. Joins to fact_sales_weekly.wk_strt_dt (Mondays only).",
+        "dt_key": "Date as an integer key in yyyyMMdd format.",
+        "wk_strt_dt": "Monday that starts the week this date belongs to.",
+        "cal_yr": "Calendar year.", "cal_q": "Calendar quarter (1–4).", "cal_mth": "Calendar month number (1–12).",
+        "mth_nm": "Month name.", "dy_nm": "Day of the week name.", "wknd_flg": "True for Saturday and Sunday.",
+        "fy_cd": "Fiscal year code, named after the year in which it ends (FY2027 = 1 Mar 2026 – 28 Feb 2027).",
+        "fy_mth": "Fiscal month number (1 = March … 12 = February).",
+        "fy_q": "Fiscal quarter (Q1 = March–May).",
+        "fy_wk": "Fiscal week number (1–53). Week 1 starts on 1 March.",
     },
     "dim_store": {
-        "_table": "Store master. One row per store, with the retailer group and South African geography.",
-        "store_id": "Store identifier.",
-        "region": "Sales region (for example Gauteng North, Western Cape).",
-        "rtl_grp": "Retailer group (the fictional retail chain the store belongs to). Also called retailer or chain.",
+        "_table": "Store master. One row per store, with the retailer group, format and South African geography.",
+        "str_id": "Store identifier. Primary key.", "str_cd": "Store code used by the retailer.", "str_nm": "Store name.",
+        "rtl_grp": "Retailer group (the retail chain the store belongs to). Also called retailer or chain.",
+        "bnr": "Store banner (trading brand of the retailer group).",
+        "fmt_cd": "Store format code: HYP = hypermarket, SUP = supermarket, CNV = convenience, WHS = wholesale / cash & carry.",
+        "rgn": "Sales region (for example Gauteng North, KZN Inland). Also called region or area.",
+        "prov": "South African province.", "cty": "City or town.", "lat": "Latitude.", "lng": "Longitude.",
+        "opn_dt": "Date the store opened.", "sts": "Store status: O = open, C = closed.",
     },
     "dim_product": {
         "_table": "Product master. One row per SKU, with the category → subcategory → brand hierarchy.",
-        "sku_id": "Product (SKU) identifier.",
-        "category": "Product category (top level of the hierarchy).",
-        "brand": "Brand name.",
+        "sku": "SKU (product) identifier. Primary key.", "sku_cd": "SKU code.", "sku_desc": "SKU description (brand, subcategory, pack size).",
+        "brnd": "Brand name.", "supp_id": "Supplier identifier. Joins to dim_supplier.supp_id.",
+        "cat": "Product category (top level of the hierarchy).", "sub_cat": "Product subcategory.",
+        "pk_sz": "Pack size.", "rsp": "Recommended selling price per unit in ZAR excl. VAT (list price at the start of the history).",
     },
-    "dim_date": {
-        "_table": "Calendar. One row per day, with calendar and fiscal attributes. The fiscal year runs March to February.",
-        "fy_wk": "Fiscal week number (1–52/53). Week 1 starts in March.",
+    "dim_supplier": {
+        "_table": "Supplier (FMCG client) master. One row per supplier.",
+        "supp_id": "Supplier identifier. Primary key.", "supp_nm": "Supplier name.",
+        "tier_cd": "Supplier tier: K = key account, C = core, E = emerging.",
+        "cat_typ": "Category type: FD = food, LQ = liquor, GM = general merchandise.",
+    },
+    "dim_merchandiser": {
+        "_table": "Field merchandisers (reps) who visit stores. One row per rep.",
+        "rep_id": "Merchandiser identifier. Primary key.", "rep_nm": "Merchandiser name.", "tl_nm": "Team lead name.",
+        "rgn": "Region the merchandiser covers.", "strt_dt": "Date the merchandiser started.",
+    },
+    "fact_sales_weekly": {
+        "_table": "Weekly sell-out (point-of-sale) sales. One row per store, SKU and week. Values in ZAR excl. VAT.",
+        "wk_strt_dt": "Monday that starts the sales week. Joins to dim_date.dt.",
+        "str_id": "Store identifier. Joins to dim_store.str_id.", "sku": "SKU identifier. Joins to dim_product.sku.",
+        "qty": "Units sold.",
+        "gsv": "Gross sales value in ZAR excl. VAT, before discounts. Also called gross sales or GSV.",
+        "nsv": "Net sales value in ZAR excl. VAT, after promotional discounts and trade terms. Also called sales, net sales or NSV. The default meaning of 'sales'.",
+        "cogs": "Cost of goods sold in ZAR.", "gp": "Gross profit (margin) in ZAR = nsv − cogs. Also called margin.",
+        "prm_flg": "Promotion flag: Y = on promotion that week in that retailer group, N = regular price.",
+        "prm_id": "Promotion identifier when prm_flg = Y. Joins to fact_promotions.prm_id.",
+    },
+    "fact_budget_monthly": {
+        "_table": "Monthly net sales budget. One row per month, region, retailer group and category. ZAR excl. VAT.",
+        "mth_strt_dt": "First day of the budget month.", "rgn": "Sales region. Matches dim_store.rgn.",
+        "rtl_grp": "Retailer group. Matches dim_store.rtl_grp.", "cat": "Product category. Matches dim_product.cat.",
+        "bgt_nsv": "Budgeted net sales value in ZAR excl. VAT. Compare with SUM(fact_sales_weekly.nsv).",
+    },
+    "fact_promotions": {
+        "_table": "Promotions. One row per promotion, for one SKU in one retailer group.",
+        "prm_id": "Promotion identifier. Primary key.", "prm_desc": "Promotion description.",
+        "mech": "Promotion mechanic (10% Off, 20% Off, Buy 2 Get 1 Free, Multi-buy 2 for, Bundle Deal).",
+        "prm_typ": "Promotion type: PR = price reduction, MB = multi-buy, BN = bundle.",
+        "disc": "Effective discount percentage (0–100).", "sku": "SKU on promotion. Joins to dim_product.sku.",
+        "rtl_grp": "Retailer group running the promotion.", "strt_dt": "First day of the promotion.", "end_dt": "Last day of the promotion.",
     },
     "fact_store_visits": {
         "_table": "Merchandiser store visits. One row per visit, with in-store execution measures.",
+        "vst_id": "Visit identifier. Primary key.", "vst_dt": "Visit date.",
+        "str_id": "Store visited. Joins to dim_store.str_id.", "rep_id": "Merchandiser. Joins to dim_merchandiser.rep_id.",
+        "dur": "Visit duration in minutes.",
         "osa_pct": "On-shelf availability %: share of the expected SKUs found on shelf during the visit (0–100). Target 85%. Also called OSA, availability or in-stock rate.",
         "pog_comp": "Planogram compliance %: share of the shelf that matches the agreed planogram (0–100). Also called POG compliance.",
+        "sos": "Share of shelf %: the supplier's share of shelf space in the category (0–100).",
     },
     "visit_notes": {
         "_table": "Free-text notes written by merchandisers during store visits. One row per note.",
-        "note_text": "The merchandiser's comment in free text (for example 'shelf empty', 'display damaged').",
+        "nt_id": "Note identifier.", "vst_id": "Visit the note belongs to. Joins to fact_store_visits.vst_id.",
+        "str_id": "Store. Joins to dim_store.str_id.", "rep_id": "Merchandiser. Joins to dim_merchandiser.rep_id.",
+        "nt_dt": "Note date.", "nt_txt": "The merchandiser's comment in free text (for example 'shelf empty', 'display damaged').",
     },
 }
 
@@ -496,7 +410,7 @@ display(spark.sql(f"""
 
 # COMMAND ----------
 
-# 6c · reference metric view (answer key for Sprint 2). Column names follow the data contract; edit if yours differ.
+# 6c · reference metric view (answer key for Sprint 2): readable names over the cryptic source columns.
 MV_VERSION = "1.1"   # if your workspace rejects this, try "0.1"
 
 def mv_sales_yaml(schema):
@@ -507,32 +421,32 @@ source: {catalog}.{schema}.fact_sales_weekly
 joins:
   - name: store
     source: {catalog}.{schema}.dim_store
-    on: source.store_id = store.store_id
+    on: source.str_id = store.str_id
   - name: product
     source: {catalog}.{schema}.dim_product
-    on: source.sku_id = product.sku_id
+    on: source.sku = product.sku
 dimensions:
   - name: Week
-    expr: source.week_start_date
+    expr: source.wk_strt_dt
   - name: Region
-    expr: store.region
+    expr: store.rgn
   - name: Retailer
     expr: store.rtl_grp
   - name: Category
-    expr: product.category
+    expr: product.cat
   - name: Brand
-    expr: product.brand
+    expr: product.brnd
 measures:
   - name: Sales
     expr: SUM(source.nsv)
   - name: Units
-    expr: SUM(source.units)
+    expr: SUM(source.qty)
   - name: Margin
-    expr: SUM(source.margin)
+    expr: SUM(source.gp)
   - name: Margin %
-    expr: SUM(source.margin) / NULLIF(SUM(source.nsv), 0)
+    expr: SUM(source.gp) / NULLIF(SUM(source.nsv), 0)
   - name: Promo Sales
-    expr: SUM(source.nsv) FILTER (WHERE source.promo_flag = 'Y')
+    expr: SUM(source.nsv) FILTER (WHERE source.prm_flg = 'Y')
 """
 
 try:
@@ -568,39 +482,22 @@ else:
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 8 · Dry run as a test team ⚠️ changes things
+# MAGIC ## Step 8 · Test as an attendee, using the team notebook (manual, about 60–90 min)
 # MAGIC
-# MAGIC Runs `01_team_setup` exactly as a team would, into `test_team_schema` (default `team_99`).
-# MAGIC Ideally, **also** open `01_team_setup` yourself and run it by hand once, so you see what attendees see.
-# MAGIC **Done when:** every row count matches and the constraints are present. Description coverage is low (expected).
-
-# COMMAND ----------
-
-result = dbutils.notebook.run("./01_team_setup", 900, {
-    "catalog": catalog, "source_schema": source_schema,
-    "team_schema": test_team_schema, "team_group": test_team_group,
-})
-print("01_team_setup finished", result or "")
-
-display(spark.sql(f"SELECT table_name, constraint_type FROM {isc}.table_constraints WHERE table_schema = '{test_team_schema}' ORDER BY 1"))
-for t in src_tables:
-    s, d = spark.table(q(catalog, source_schema, t)).count(), spark.table(q(catalog, test_team_schema, t)).count()
-    print(f"{'✅' if s == d else '❌'} {t}: source={s} team={d}")
-
-# COMMAND ----------
-
-# MAGIC %md
-# MAGIC ## Step 9 · Test every sprint as an attendee (manual, about 60–90 min)
+# MAGIC Test **exactly the way an attendee will**: open the attendee notebook yourself, and don't run it from here.
 # MAGIC
-# MAGIC Follow `docs/attendee-guide.md` with one scenario (Scenario D, Client Executive, covers the most tables), using `test_team_schema`. Time each step.
+# MAGIC 1. Open **`01_team_setup`** (in this folder), set `catalog` and `team_schema` (for example `team_01`), and click **Run all**.
+# MAGIC    Check that every row count matches ✅, the constraints are present, and description coverage is low (expected).
+# MAGIC 2. Follow `docs/attendee-guide.md` with one scenario (Scenario D, Client Executive, covers the most tables) in that team schema. Time each step.
 # MAGIC
 # MAGIC | Sprint | Test | Pass when |
 # MAGIC |---|---|---|
-# MAGIC | 1 · Dashboard | Create a dashboard on the `team_99` tables, use the AI assistant for 3 visuals, add filters, publish | Published, and the AI assistant produces sensible charts |
-# MAGIC | 2 · Metric views | Create `team_99.mv_sales` from the attendee-guide template (Appendix A), and query it with `MEASURE()` | The cell below returns rows, and the dashboard can use the metric view as a dataset |
-# MAGIC | 3 · Genie baseline | Create a Genie space on the `team_99` tables, and ask the 10 Scenario D questions | You record a baseline. Expect several wrong answers (that's the point) |
-# MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The score goes up. If not, make the source less documented or the questions more ambiguous |
-# MAGIC | 4a · Fallback | Run `02_apply_reference_descriptions` on `team_99` | Descriptions applied, and Genie improves further |
+# MAGIC | 0 · Team setup | Run `01_team_setup` as above | Row counts match, and the tables appear in Catalog Explorer with lineage to `hack_14oct` |
+# MAGIC | 1 · Dashboard | Create a dashboard on the team tables, use the AI assistant for 3 visuals, add filters, publish | Published, and the AI assistant produces sensible charts |
+# MAGIC | 2 · Metric views | Create `mv_sales` in the team schema from the attendee-guide template (Appendix A), and query it with `MEASURE()` | It returns rows, and the dashboard can use the metric view as a dataset |
+# MAGIC | 3 · Genie baseline | Create a Genie space on the team tables, and ask the 10 Scenario D questions | You record a baseline. Expect several wrong answers (that's the point) |
+# MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The score goes up. If not, make the questions more ambiguous |
+# MAGIC | 4a · Fallback | Run `02_apply_reference_descriptions` on the team schema | Descriptions applied, and Genie improves further |
 # MAGIC | 4b · Tuning | Add instructions (fiscal year, sales = NSV), sample questions, and the metric view | Final score ≥ 8/10 |
 # MAGIC | 5 · AI Functions | Run the Scenario E `ai_classify` example on 100 notes | Sensible issue types |
 # MAGIC | 5 · App (optional) | Create an app, then use the 2 Genie Code prompts (attendee guide, Appendix C) | Tab 1 table and Tab 2 visuals work. Note the time it took |
@@ -609,31 +506,14 @@ for t in src_tables:
 
 # COMMAND ----------
 
-# Sprint 2 check: does the attendee template work on the test team schema?
-try:
-    spark.sql(f"CREATE OR REPLACE VIEW {q(catalog, test_team_schema, 'mv_sales')} WITH METRICS LANGUAGE YAML AS $${mv_sales_yaml(test_team_schema)}$$")
-    display(spark.sql(f"SELECT Retailer, MEASURE(Sales) AS sales FROM {q(catalog, test_team_schema, 'mv_sales')} GROUP BY ALL ORDER BY sales DESC"))
-except Exception as e:
-    print(f"❌ The template failed on {test_team_schema}: {str(e)[:400]}\nUpdate attendee-guide Appendix A to match.")
-
-# COMMAND ----------
-
 # MAGIC %md
-# MAGIC ## Step 10 · Cleanup of the test team ⚠️ destructive
+# MAGIC ## Step 9 · Clean up after testing (manual)
 # MAGIC
-# MAGIC Drops **only** `test_team_schema` (and everything in it). It never touches the source or kit schemas.
-# MAGIC To run it, type `DROP <test_team_schema>` (for example `DROP team_99`) into the **Cleanup confirmation** widget.
-# MAGIC Delete any test dashboards, Genie spaces and apps by hand.
+# MAGIC Drop the team schema you tested with, so the real team starts fresh. Run it yourself in the SQL editor, replacing the names:
 # MAGIC
-# MAGIC *After the event:* drop each `team_XX` schema the same way, after agreeing with the customer what to keep.
-
-# COMMAND ----------
-
-confirm = dbutils.widgets.get("confirm_cleanup").strip()
-if test_team_schema in (source_schema, kit_schema):
-    raise ValueError("Refusing: test_team_schema is the same as the source or kit schema.")
-if confirm == f"DROP {test_team_schema}":
-    spark.sql(f"DROP SCHEMA IF EXISTS {TEST} CASCADE")
-    print(f"🗑️  Dropped {TEST}")
-else:
-    print(f"Skipped. Type 'DROP {test_team_schema}' into the Cleanup confirmation widget to drop the test team schema.")
+# MAGIC ```sql
+# MAGIC DROP SCHEMA <catalog>.team_01 CASCADE;   -- the test team schema only, never hack_14oct or facilitator_kit
+# MAGIC ```
+# MAGIC
+# MAGIC Delete any test dashboards, Genie spaces and apps by hand. *After the event:* drop each `team_XX` schema the same way, after agreeing
+# MAGIC with the customer what to keep.
