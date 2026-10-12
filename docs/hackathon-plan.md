@@ -16,16 +16,16 @@
 Every module follows the same rhythm, so attendees get results within minutes and then learn *why* the governed way is better:
 
 ```
- QUICK WIN (≈25 min)                      IMPROVE (≈35 min)                         PROVE IT
+ QUICK WIN (≈25 min)                      IMPROVE (≈35 min)                         SEE THE DIFFERENCE
  ─────────────────────                    ─────────────────────                     ──────────────
  Dashboard straight on the attendee tables →  Rebuild on METRIC VIEWS (one definition →  Same numbers everywhere,
  using AI-assisted widgets                of Sales, Margin %, YoY, OSA %)            and less SQL per widget
 
- Genie space on the undocumented tables, →  1) DESCRIBE THE DATA in UC (table and    →  Genie accuracy score at
- asking 10 test questions (baseline)        column descriptions, AI-generated then      every step: baseline →
-                                            reviewed)                                   after descriptions →
-                                            2) instructions, sample questions, SQL      final
-                                            expressions, metric views, benchmarks
+ Genie space on the undocumented tables, →  1) DESCRIBE THE DATA in UC (table and    →  Re-ask the same 10
+ asking 10 questions                        column descriptions, AI-generated then      questions and compare
+                                            reviewed)                                   the answers
+                                            2) instructions, sample questions, SQL
+                                            expressions, metric views
 ```
 
 ### Outcomes: by the end, each attendee has
@@ -35,7 +35,7 @@ Every module follows the same rhythm, so attendees get results within minutes an
 | 1 | An **AI/BI Dashboard**: a quick version first, then rebuilt on metric views | **Core** |
 | 2 | One or more **UC Metric Views** that define the attendee's business KPIs once | **Core** |
 | 3 | **Documented data:** table and column descriptions on every table in the attendee schema, AI-generated and then reviewed by the attendee | **Core (key capability)** |
-| 4 | A **Genie space** with a baseline accuracy score, a score after adding descriptions, and a final score after tuning (instructions, sample questions, metric views, and so on) | **Core** |
+| 4 | A **Genie space**, tuned with descriptions, instructions, sample questions and metric views | **Core** |
 | 5 | A **Databricks App** built with Genie Code: Tab 1 shows a data table, Tab 2 shows visuals | **Core** (section 7) |
 | 6 | A 3-minute demo showing the "before → after" improvement | **Core** |
 
@@ -95,7 +95,7 @@ There is **one scenario for everyone** (section 8, `docs/scenario.md`): no optio
 **Trade-offs to manage**
 
 - **Storage:** 5 copies. At about 5M rows that's small (a few hundred MB at most).
-- **Drift:** attendees' numbers can differ after their changes. That's acceptable, because Genie test answers are checked against each attendee's own data.
+- **Drift:** attendees' numbers can differ after their changes. That's fine, because each attendee works with their own copy.
 - **Constraints:** the copy script re-applies the PK/FK constraints, because Genie uses them for joins. Descriptions are deliberately left for the attendees to write.
 
 ### Working individually
@@ -155,7 +155,7 @@ Writing descriptions is a **key capability to showcase**, so the `hack_14oct` ta
 |---|---|---|
 | `hack_14oct.*` (what attendees copy) | **No descriptions and no metric views.** Cryptic, inconsistent column names (`str_id`, `sku`, `qty`, `nsv`, `gp`, `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt`) and coded values (`fmt_cd` HYP/SUP/CNV/WHS, `sts` O/C, `prm_typ` PR/MB/BN) | Like real source systems. Dashboards and Genie must guess until attendees describe the data and build metric views, which gives a clear baseline |
 
-This makes the impact of descriptions **measurable**: attendees record their Genie score before and after describing the data (section 5).
+Attendees ask Genie the same questions before and after describing the data, and see the difference (section 5).
 
 ### 3.2 Attendee setup notebook (each attendee runs it in Sprint 0)
 
@@ -209,56 +209,9 @@ same thing everywhere.
 | **L4: Make it discoverable** | Add comments, display names and synonyms to the measures and dimensions | Genie and dashboard users understand the fields |
 | **L5: Reuse it** | Switch the dashboard datasets to the metric views, and add the metric views to the Genie space | The before/after comparison for the demo |
 
-### Reference solution (attendees get a partly filled starter with TODOs in the attendee guide, Appendix A)
-
-```sql
-CREATE OR REPLACE VIEW <hack_catalog>.jane_doe.mv_sales
-WITH METRICS
-LANGUAGE YAML
-AS $$
-version: 1.1                      # use the version in the current docs
-comment: "Weekly trade performance – governed sales KPIs"
-source: <hack_catalog>.jane_doe.fact_sales_weekly
-joins:
-  - name: store
-    source: <hack_catalog>.jane_doe.dim_store
-    on: source.str_id = store.str_id
-  - name: product
-    source: <hack_catalog>.jane_doe.dim_product
-    on: source.sku = product.sku
-dimensions:
-  - name: Week
-    expr: source.wk_strt_dt
-  - name: Region
-    expr: store.rgn
-  - name: Retailer
-    expr: store.rtl_grp
-  - name: Category
-    expr: product.cat
-  - name: Brand
-    expr: product.brnd
-measures:
-  - name: Sales
-    expr: SUM(source.nsv)
-  - name: Units
-    expr: SUM(source.qty)
-  - name: Margin
-    expr: SUM(source.gp)
-  - name: Margin %
-    expr: SUM(source.gp) / NULLIF(SUM(source.nsv), 0)
-  - name: Promo Sales
-    expr: SUM(source.nsv) FILTER (WHERE source.prm_flg = 'Y')
-$$;
-
--- Use it
-SELECT Region, MEASURE(Sales) AS sales, MEASURE(`Margin %`) AS margin_pct
-FROM <hack_catalog>.jane_doe.mv_sales
-GROUP BY ALL
-ORDER BY sales DESC;
-```
+Attendees get a partly filled metric view starter with TODOs in the attendee guide (Appendix A).
 
 > Attendees can also build metric views in the **Catalog Explorer UI** (with the Assistant's help) instead of writing YAML. Both routes are valid.
-> Column names match `02_generate_synthetic_data` (cryptic on purpose; see its `RENAMES` map).
 
 ---
 
@@ -267,8 +220,7 @@ ORDER BY sales DESC;
 ### Quick win (Sprint 3)
 
 1. Create a Genie space on the attendee's tables as they are: **undocumented** (`fact_sales_weekly`, the dims, and `fact_store_visits`).
-2. Ask the **10 test questions** from `docs/scenario.md` (the expected answers are facilitator-only).
-3. Record the **baseline score** (for example 4/10) on the attendee scoreboard.
+2. Ask the **10 questions** from `docs/scenario.md`, and note which answers look wrong or unclear.
 
 ### Sprint 4a: describe your data in Unity Catalog (key capability)
 
@@ -278,16 +230,16 @@ then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboar
 | Step | How | Tip |
 |---|---|---|
 | **1. AI-generated table descriptions** | Catalog Explorer → table → **Overview** → *AI generate* the description → review → **Accept** or edit | AI gives a first draft. The attendee reviews it and makes it correct |
-| **2. AI-generated column descriptions** | Catalog Explorer → **Columns** tab → AI-suggested descriptions → accept or edit each one | Concentrate on the columns behind the test questions and the abbreviations (`nsv`, `osa_pct`, `fy_wk`) |
+| **2. AI-generated column descriptions** | Catalog Explorer → **Columns** tab → AI-suggested descriptions → accept or edit each one | Concentrate on the columns behind the 10 questions and the abbreviations (`nsv`, `osa_pct`, `fy_wk`) |
 | **3. Fix them in SQL (faster in bulk)** | `COMMENT ON TABLE jane_doe.fact_sales_weekly IS '...';` and `ALTER TABLE jane_doe.fact_sales_weekly ALTER COLUMN nsv COMMENT 'Net sales value in ZAR, excl. VAT';` | Ask the Assistant to draft the statements for a whole table |
 | **4. Tags** | Add governed tags such as `domain=sales`, `kpi=true`, `pii=false` | Shows governance and makes data easier to find |
-| **5. Re-score Genie** | Ask the same 10 questions again, **without changing anything else** | Record the **"after descriptions" score**. This isolates the value of good metadata |
+| **5. Re-ask Genie** | Ask the same 10 questions again, **without changing anything else** | Compare the answers. This shows the value of good metadata |
 
 **What a good description includes** (on the attendee guide cheat-sheet): the business meaning, the **unit and currency**, the **grain**
 ("one row per store, SKU and week"), allowed values or codes, **abbreviations spelled out**, and common synonyms ("OSA, availability, in-stock").
 
 
-### Sprint 4b: Genie tuning ladder. Each step should move the score further
+### Sprint 4b: Genie tuning ladder. Each step should improve the answers
 
 | Level | What to add | Example | Typical fix |
 |---|---|---|---|
@@ -297,11 +249,7 @@ then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboar
 | **G4: SQL expressions** | Reusable measures, filters and dimensions in the space's knowledge store | Filter `Active stores = store_status = 'Open'`, measure `Margin %` | Repeated logic gets defined once |
 | **G5: Joins and example SQL** | Define join relationships, and add example SQL queries for the hard questions | YoY growth, share of category | Wrong joins, complex calculations |
 | **G6: Metric views as data** | Add `mv_sales`, `mv_execution` and `mv_budget` to the space (alongside the tables or instead of them) | Genie uses `MEASURE(\`Margin %\`)` | The governed KPIs come along for free |
-| **G7: Trusted assets** | UC SQL functions for parameterised business questions | `fn_store_scorecard(store_id)` | Answers marked as trusted |
-| **G8: Benchmarks** | Load the 10 test questions with expected SQL as benchmarks, and run the evaluation | Accuracy goes from 5/10 to 9/10 | A **proven** improvement, which becomes the demo slide |
-
-**Scoreboard:** a shared sheet (or the facilitator's screen) shows each attendee's Genie score in three columns: **baseline → after descriptions → final**. It's a friendly competition
-and makes the value of tuning very visible.
+| **G7: Trusted assets** | UC SQL functions for parameterised business questions | `fn_store_summary(str_id)` | Answers marked as trusted |
 
 ---
 
@@ -309,17 +257,17 @@ and makes the value of tuning very visible.
 
 | Time | Sprint | Content | Checkpoint |
 |---|---|---|---|
-| 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, rules and judging, and the scenario | Ready |
+| 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, rules, and the scenario | Ready |
 | 0:15 – 0:30 | **Sprint 0: Attendee setup** | Run `01_attendee_setup` (create your own schema, copy the data from `hack_14oct`), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
 | 0:30 – 1:00 | **Sprint 1: Dashboard quick win** | 5 min demo, then 25 min build: a dashboard straight on the attendee tables, using the AI assistant to create widgets, plus filters, then publish | **First dashboard published** |
 | 1:00 – 1:45 | **Sprint 2: Metric views** | 10 min demo, then 35 min build: metric view ladder L1–L5, and switch the dashboard to the metric views | **Dashboard v2 on metric views** |
 | 1:45 – 1:55 | Break | | |
-| 1:55 – 2:20 | **Sprint 3: Genie quick win** | 5 min demo, then 20 min build: a Genie space on the undocumented tables, with the 10 test questions | **Baseline score recorded** |
-| 2:20 – 2:40 | **Sprint 4a: Describe your data** | 5 min demo, then 15 min build: AI-generated table and column descriptions, reviewed and edited by the attendee, then Genie re-scored | **"After descriptions" score recorded** |
-| 2:40 – 3:10 | **Sprint 4b: Genie tuning** | 5 min demo, then 25 min build: tuning ladder G1–G8, including adding the metric views | **Final score recorded** |
+| 1:55 – 2:20 | **Sprint 3: Genie quick win** | 5 min demo, then 20 min build: a Genie space on the undocumented tables, with the 10 test questions | **Genie space created** |
+| 2:20 – 2:40 | **Sprint 4a: Describe your data** | 5 min demo, then 15 min build: AI-generated table and column descriptions, reviewed and edited by the attendee, then the same questions re-asked | **Tables described** |
+| 2:40 – 3:10 | **Sprint 4b: Genie tuning** | 5 min demo, then 25 min build: tuning ladder G1–G7, including adding the metric views | **Genie tuned** |
 | 3:10 – 3:30 | **Sprint 5: App** | 5 min demo, then 15 min build with Genie Code: Tab 1 data table (deploy), then Tab 2 visuals (section 7) | **App deployed** |
-| 3:30 – 3:55 | **Demos** | 5 volunteers × 4 min: show **before → after** (dashboard v1 → v2, Genie score baseline → final) | |
-| 3:55 – 4:00 | **Awards and wrap-up** | Winner, next steps, survey | |
+| 3:30 – 3:55 | **Demos** | 5 volunteers × 4 min: show **before → after** (dashboard v1 → v2, Genie answers before and after tuning) | |
+| 3:55 – 4:00 | **Wrap-up** | Next steps, survey | |
 
 > **Nobody gets stuck:** if an attendee misses a checkpoint, a helper sits with them and they carry on with the next sprint.
 
@@ -397,11 +345,11 @@ review and deploy what it builds. The app has two tabs, built one stage at a tim
 | Dashboard | v1 on the tables, then v2 on metric views: an executive page plus a "Why?" drill-down page |
 | Metric views | `mv_sales` (Sales, Units, Margin, Margin %, YoY, Promo Sales), `mv_budget` (Budget, Variance %), `mv_execution` (Avg OSA %, POG compliance %, % of stores below target) |
 | Descriptions | Every table and column in their schema, AI-generated and then reviewed |
-| Genie | 10 test questions, with the score recorded at baseline, after descriptions, and final |
+| Genie | 10 questions, re-asked after describing the data and after tuning |
 | App | Tab 1 data table and Tab 2 visuals, built with Genie Code |
 
-The 10 Genie test questions include 3–4 "trap" questions (sales = NSV, fiscal year March–February, "last week", the OSA target)
-that only get answered correctly after describing the data and tuning.
+The 10 Genie questions include 3–4 tricky ones (sales = NSV, fiscal year March–February, "last week", the OSA target)
+that Genie only handles well after the data is described and the space is tuned.
 
 ---
 
@@ -451,28 +399,12 @@ databricks-aibi-hackathon/
     └── 02_generate_synthetic_data ← synthetic data generator (called by the runbook)
 ```
 
-A shared **scoreboard** (a sheet is enough) tracks each attendee's Genie score: baseline → after descriptions → final.
 
-**Staffing:** 1 lead facilitator and 2 floating helpers (about 1 helper per 10 attendees). One of them owns the scoreboard and the app SP grants.
-
----
-
-## 11. Judging rubric (100 points)
-
-| Criterion | Points |
-|---|---|
-| Business value and storytelling (insight and action) | 15 |
-| Dashboard quality (v2: clarity, interactivity, correctness) | 15 |
-| Metric views (coverage, correct ratio/YoY measures, metadata, reused in the dashboard and Genie) | 15 |
-| **Data descriptions** (coverage and quality of table and column descriptions) | 15 |
-| Genie: final accuracy on the test questions | 15 |
-| Genie: **improvement** from baseline to final | 10 |
-| App: Tab 1 table (5) and Tab 2 visuals (5) | 10 |
-| Use of AI features (AI-assisted authoring, Genie Code) | 5 |
+**Staffing:** 1 lead facilitator and 2 floating helpers (about 1 helper per 10 attendees). One of them handles the app SP grants.
 
 ---
 
-## 12. Compute and cost guardrails
+## 11. Compute and cost guardrails
 
 - 1–2 serverless SQL warehouses (Medium, autoscale, auto-stop 10 minutes) for 20 attendees.
 - About 350K weekly sales rows, so queries return in seconds.
@@ -482,7 +414,7 @@ A shared **scoreboard** (a sheet is enough) tracks each attendee's Genie score: 
 
 ---
 
-## 13. Risks and mitigations
+## 12. Risks and mitigations
 
 | Risk | Mitigation |
 |---|---|
@@ -490,15 +422,15 @@ A shared **scoreboard** (a sheet is enough) tracks each attendee's Genie score: 
 | Users can't log in or lack entitlements | Login check at T-1 day, and one spare test account |
 | Attendees fall behind a checkpoint | Helpers sit with them, and they carry on with the next sprint |
 | Metric view YAML errors slow attendees down | The partly filled starter in the guide, the UI-based route, and the Assistant |
-| Genie baseline is already "too good" (no visible improvement) | Leave `hack_14oct` undocumented, use business abbreviations in column names, and plant ambiguous "trap" questions and fiscal-calendar rules in the test set |
-| AI-generated descriptions are accepted without review, so they're plausible but wrong | Each attendee reviews them, and the scoreboard shows whether descriptions actually helped |
+| Genie already answers well before tuning (no visible improvement) | Leave `hack_14oct` undocumented, use business abbreviations in column names, and plant ambiguous "trap" questions and fiscal-calendar rules in the test set |
+| AI-generated descriptions are accepted without review, so they're plausible but wrong | Each attendee reviews them, and re-asking the questions shows whether descriptions actually helped |
 | An attendee breaks its data | Re-run `01_attendee_setup`. `hack_14oct` is read-only |
 | Extra or oddly named schemas | Naming convention, and a facilitator check after Sprint 0 |
 | The app SP has no access | Pre-created apps, with the SP given `USE CATALOG` and warehouse access in advance; attendees grant schema access themselves |
 
 ---
 
-## 14. Post-hackathon and open decisions
+## 13. Post-hackathon and open decisions
 
 **Post-hackathon**
 - Share the winning assets, and keep the best metric views, dashboard and Genie space as a reference.
@@ -511,4 +443,3 @@ A shared **scoreboard** (a sheet is enough) tracks each attendee's Genie score: 
 3. Apps: confirm the app quota (20+). Genie Code builds the app, and Streamlit is the suggested framework.
 4. Whether participants are business, technical, or mixed users.
 5. Data: prepared by the facilitator before the hackathon (fictional names, following the data contract in section 3.1).
-6. Prizes and judges (ideally a customer business sponsor on the panel).

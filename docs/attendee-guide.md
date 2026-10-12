@@ -21,7 +21,6 @@ answer. Facilitators will demo the **how** at the start of each sprint, so watch
 | Your schema | `<hack_catalog>.<your_name>`: created for you by the setup notebook, named after you (for example `jane_doe`) |
 | SQL warehouse | `<warehouse>` |
 | Setup notebook | `<workspace-path>/01_attendee_setup` |
-| Scoreboard | `<scoreboard-link>` |
 
 **Checklist:** ☐ I can log in ☐ I've opened the [scenario](scenario.md)
 
@@ -39,7 +38,7 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 1. Work **only in your own schema**. `hack_14oct` is read-only, and you copy from it once.
 2. Start every name with your initials: dashboard `JD – …`, Genie space `JD – …`, app `jd-…`. Metric views go in your schema as `mv_…`.
 3. Use the **AI help everywhere**: the Assistant, AI-generated descriptions, AI-assisted dashboard widgets, and Genie Code for the app.
-4. **Record every Genie score** on the scoreboard (baseline, after descriptions, final).
+4. After each improvement, **re-ask the same Genie questions** and compare the answers.
 5. Stuck for more than 5 minutes? Raise a hand.
 
 ---
@@ -53,12 +52,12 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 | 0:30 – 1:00 | **1. Dashboard quick win** | Build a first dashboard straight on your tables | ✅ Dashboard v1 published |
 | 1:00 – 1:45 | **2. Metric views** | Define your KPIs once as metric views, and rebuild the dashboard on them | ✅ Dashboard v2 on metric views |
 | 1:45 – 1:55 | Break | | |
-| 1:55 – 2:20 | **3. Genie quick win** | Create a Genie space and ask your 10 test questions | ✅ Baseline score recorded |
-| 2:20 – 2:40 | **4a. Describe your data** | Add table and column descriptions in Unity Catalog, then re-ask the 10 questions | ✅ "After descriptions" score recorded |
-| 2:40 – 3:10 | **4b. Tune Genie** | Instructions, sample questions, SQL expressions, metric views, benchmarks | ✅ Final score recorded |
+| 1:55 – 2:20 | **3. Genie quick win** | Create a Genie space and ask the 10 questions | ✅ Genie space created |
+| 2:20 – 2:40 | **4a. Describe your data** | Add table and column descriptions in Unity Catalog, then re-ask the 10 questions | ✅ Tables described |
+| 2:40 – 3:10 | **4b. Tune Genie** | Instructions, sample questions, SQL expressions, metric views | ✅ Genie tuned |
 | 3:10 – 3:30 | **5. App** | Build a two-tab app with Genie Code: data table, then visuals | ✅ App deployed |
 | 3:30 – 3:55 | Demos | 5 volunteers: 3 min demo + 1 min Q&A each | |
-| 3:55 – 4:00 | Awards | | |
+| 3:55 – 4:00 | Wrap-up | | |
 
 ---
 
@@ -92,8 +91,8 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 ### Sprint 3: Genie quick win (25 min)
 
 1. Create a **Genie space** named `<initials> – Monday Genie`, using your **tables** (not the metric views yet).
-2. Ask the **10 test questions** from the [scenario](scenario.md) **exactly as written**.
-3. Mark each answer correct or incorrect, and record the **baseline score** on the scoreboard.
+2. Ask the **10 questions** from the [scenario](scenario.md) **exactly as written**.
+3. Note which answers look wrong or unclear. You'll fix them in Sprint 4.
 
 ### Sprint 4a: Describe your data (20 min, a key capability)
 
@@ -101,11 +100,11 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 2. **Review every suggestion.** The business expert corrects the meanings, units (ZAR, %), grain and abbreviations (Appendix B).
 3. Concentrate on the tables and columns behind your 10 test questions first.
 4. You can also bulk-edit with SQL `COMMENT ON` / `ALTER COLUMN … COMMENT`, and add tags.
-5. **Re-ask the same 10 questions without changing anything else**, and record the **"after descriptions" score**.
+5. **Re-ask the same 10 questions without changing anything else**, and compare the answers.
 
 ### Sprint 4b: Tune Genie (30 min)
 
-Work through this list from the top. After each step, re-ask the questions that are still wrong:
+Work through this list from the top. After each step, re-ask the questions that still look wrong:
 
 1. **General instructions:** business rules (what "sales" means, the fiscal year March–February, what "top" means, currency ZAR).
 2. **Space-level refinements:** synonyms, hide columns you don't need.
@@ -114,9 +113,7 @@ Work through this list from the top. After each step, re-ask the questions that 
 5. **Joins and example SQL** for the hard questions.
 6. **Add your metric views** to the space.
 7. **Trusted assets:** a UC SQL function for a parameterised question.
-8. **Benchmarks:** load your 10 questions and run the evaluation.
 
-Record your **final score** on the scoreboard.
 
 ### Sprint 5: App (20 min)
 
@@ -128,24 +125,9 @@ Do Tab 1 first and deploy it, then add Tab 2.
 Tell a **before → after** story:
 1. The Monday question (15 s).
 2. Dashboard v1 → v2 on metric views: what changed (45 s).
-3. Genie: a live question, plus your score from **baseline → after descriptions → final** (60 s).
+3. Genie: a live question, before and after tuning (60 s).
 4. The insight you found and the action to take this week (30 s).
 5. The app (30 s).
-
----
-
-## 6. How you'll be judged
-
-| Criterion | Points |
-|---|---|
-| Business value and storytelling | 15 |
-| Dashboard quality (v2) | 15 |
-| Metric views | 15 |
-| Data descriptions (coverage and quality) | 15 |
-| Genie: final accuracy | 15 |
-| Genie: improvement from baseline to final | 10 |
-| App: Tab 1 table (5) and Tab 2 visuals (5) | 10 |
-| Use of AI features | 5 |
 
 ---
 
@@ -219,12 +201,6 @@ You can also create metric views from **Catalog Explorer** (Create → Metric vi
 | **Sell-out** | Sales from the retailer to shoppers (point-of-sale data) |
 | **Fiscal year (FY)** | March to February |
 | **Merchandiser / rep** | A field team member who visits stores |
-
-### Genie scoring
-
-- **Correct:** the right number(s) and the right filters/time period. The SQL looks sensible.
-- **Incorrect:** a wrong number, a wrong period or filter, or Genie asks for clarification.
-- Ask questions **exactly as written** every time, so the scores are comparable.
 
 ---
 

@@ -43,7 +43,7 @@ Build one page with 4–6 visuals:
 Then rebuild the dashboard on the metric views (dashboard v2), and add a second **"Why?" page** with a drill-down
 (region → retailer → store) and an "OSA vs sales growth by region" visual.
 
-## Sprint 3: Genie test questions (ask them exactly as written)
+## Sprint 3: Genie questions (ask them exactly as written)
 
 1. What were total sales last week?
 2. How did sales last week compare to the same week last year?
@@ -56,7 +56,7 @@ Then rebuild the dashboard on the metric views (dashboard v2), and add a second 
 9. What is the margin % by category this fiscal year?
 10. Which stores were not visited in the last 4 weeks?
 
-Record your score: **baseline → after descriptions → final**.
+Ask them again after describing the data (Sprint 4a) and after tuning (Sprint 4b), and compare the answers.
 
 ## Sprint 4a: Describe these first
 

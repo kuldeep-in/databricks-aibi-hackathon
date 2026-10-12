@@ -251,12 +251,11 @@ display(spark.sql(f"SELECT table_name, constraint_name, constraint_type FROM {is
 # MAGIC | 0 · Attendee setup | Run `01_attendee_setup` as above | Row counts match, and the tables appear in Catalog Explorer with lineage to `hack_14oct` |
 # MAGIC | 1 · Dashboard | Create a dashboard on your tables, use the AI assistant for 3 visuals, add filters, publish | Published, and the AI assistant produces sensible charts |
 # MAGIC | 2 · Metric views | Create `mv_sales` in your schema from the attendee-guide template (Appendix A), and query it with `MEASURE()` | It returns rows, and the dashboard can use the metric view as a dataset |
-# MAGIC | 3 · Genie baseline | Create a Genie space on your tables, and ask the 10 scenario questions | You record a baseline. Expect several wrong answers (that's the point) |
-# MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The score goes up. If not, make the questions more ambiguous |
-# MAGIC | 4b · Tuning | Add instructions (fiscal year, sales = NSV), sample questions, and the metric view | Final score ≥ 8/10 |
+# MAGIC | 3 · Genie quick win | Create a Genie space on your tables, and ask the 10 scenario questions | Expect several wrong or unclear answers (that's the point) |
+# MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The answers get better |
+# MAGIC | 4b · Tuning | Add instructions (fiscal year, sales = NSV), sample questions, and the metric view | Most questions are now answered well |
 # MAGIC | 5 · App | Create an app, then use the 2 Genie Code prompts (attendee guide, Appendix C) | Tab 1 table and Tab 2 visuals work. Note the time it took |
 # MAGIC
-# MAGIC Write down the **expected answers** to the 10 scenario questions while you test, and keep them for scoring (don't share them with attendees).
 
 # COMMAND ----------
 

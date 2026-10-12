@@ -8,10 +8,10 @@ and **Databricks Apps built with Genie Code**.
 
 ## Approach: quick win first, then make it better
 
-| Area | Quick win | Improve | Prove it |
+| Area | Quick win | Improve | See the difference |
 |---|---|---|---|
 | Dashboards | Dashboard v1 straight on the tables | Rebuild on **metric views** | Same KPIs everywhere, less SQL |
-| Genie | Genie space on undocumented tables (baseline score) | **Describe the data** in Unity Catalog, then add instructions, sample questions, SQL expressions, metric views, benchmarks | Score: baseline → after descriptions → final |
+| Genie | Genie space on undocumented tables | **Describe the data** in Unity Catalog, then add instructions, sample questions, SQL expressions, metric views | Re-ask the same questions and compare |
 | App | Tab 1: data table | Tab 2: visuals | Built with Genie Code |
 
 ## Data model
@@ -23,7 +23,7 @@ tables into their own schema, so they own the data **and its descriptions**.
 
 ```
 docs/
-├── hackathon-plan.md          # facilitator plan: agenda, data strategy, metric views, Genie ladder, grants, rubric, risks
+├── hackathon-plan.md          # facilitator plan: agenda, data strategy, metric views, Genie ladder, grants, risks
 ├── attendee-guide.md          # high-level attendee instructions, sprint by sprint, plus cheat-sheets
 └── scenario.md                # the one scenario everyone builds (Monday Command Centre)
 notebooks/
