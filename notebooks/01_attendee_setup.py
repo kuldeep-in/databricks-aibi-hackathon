@@ -1,55 +1,52 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 01 · Team setup: copy the hackathon data into your team schema
+# MAGIC # 01 · Attendee setup: create your own schema and copy the hackathon data into it
 # MAGIC
 # MAGIC **Perfect Store Command Centre: from sell-out to shelf**
 # MAGIC
-# MAGIC Run this **once per team**, in Sprint 0. It will:
-# MAGIC 1. Create your team schema (for example `team_03`) and, optionally, hand ownership to your team group.
-# MAGIC 2. Copy every table from the source schema with `DEEP CLONE` (an independent copy you can change freely).
+# MAGIC **Every attendee runs this once**, at the start (Sprint 0). It will:
+# MAGIC 1. Create **your own schema** (by default named after you, for example `jane_doe`). You own it, so you can change anything in it.
+# MAGIC 2. Copy every table from the read-only source schema `hack_14oct` with `DEEP CLONE` (an independent copy you can change freely).
 # MAGIC 3. Re-apply the primary/foreign key constraints from the source tables (Genie uses them for joins).
 # MAGIC 4. Validate the copy: row counts, constraints and description coverage.
 # MAGIC
-# MAGIC **How to run:** fill in the widgets at the top, then **Run all**. It takes about 2–3 minutes on serverless.
+# MAGIC **How to run:** fill in the `catalog` widget at the top, then **Run all**. It takes about 1–2 minutes on serverless.
 # MAGIC Broke your data later? Run it again to reset your copy. Metric views, dashboards and Genie spaces aren't affected.
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## 1. Configuration
-# MAGIC Replace the `<...>` placeholders. Your facilitator gives you the catalog name and your team number.
+# MAGIC Enter the **catalog** your facilitator gives you. Leave `my_schema` blank to use a schema named after you, or type your own name for it.
 
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("team_schema", "team_XX", "2. Team schema (team_01..team_05)")
-dbutils.widgets.text("team_group", "", "3. Team group (optional owner)")
+dbutils.widgets.text("my_schema", "", "2. My schema (blank = named after me)")
 
 # COMMAND ----------
 
 catalog = dbutils.widgets.get("catalog").strip()
 source_schema = "hack_14oct"   # read-only source data
-team_schema = dbutils.widgets.get("team_schema").strip()
-team_group = dbutils.widgets.get("team_group").strip()
+import re
+me = spark.sql("SELECT current_user()").first()[0]
+my_schema = dbutils.widgets.get("my_schema").strip() or re.sub(r"[^0-9a-z]+", "_", me.split("@")[0].lower()).strip("_")
 
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)
 
 src = q(catalog, source_schema)
-dst = q(catalog, team_schema)
-print(f"Source : {src}\nTarget : {dst}\nOwner  : {team_group or '(you)'}")
+dst = q(catalog, my_schema)
+print(f"Source    : {src}  (read-only)\nMy schema : {dst}\nOwner     : {me}")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## 2. Create the team schema
+# MAGIC ## 2. Create your schema
 
 # COMMAND ----------
 
-spark.sql(f"CREATE SCHEMA IF NOT EXISTS {dst} COMMENT 'Perfect Store hackathon: team working schema, copied from {source_schema}'")
-if team_group:
-    spark.sql(f"ALTER SCHEMA {dst} OWNER TO `{team_group}`")
-    print(f"Ownership of {dst} transferred to {team_group}")
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS {dst} COMMENT 'Perfect Store hackathon: working schema of {me}, copied from {source_schema}'")
 display(spark.sql(f"DESCRIBE SCHEMA EXTENDED {dst}"))
 
 # COMMAND ----------
@@ -70,14 +67,14 @@ if not tables:
     raise ValueError(f"No tables found in {src}. Ask your facilitator to check that the data is loaded.")
 
 for t in tables:
-    spark.sql(f"CREATE OR REPLACE TABLE {q(catalog, team_schema, t)} DEEP CLONE {q(catalog, source_schema, t)}")
+    spark.sql(f"CREATE OR REPLACE TABLE {q(catalog, my_schema, t)} DEEP CLONE {q(catalog, source_schema, t)}")
     print(f"✅ cloned {t}")
 
 # COMMAND ----------
 
 # MAGIC %md
 # MAGIC ## 4. Re-apply PK/FK constraints
-# MAGIC Primary keys first, then foreign keys (which reference the team's own copies of the tables).
+# MAGIC Primary keys first, then foreign keys (which reference your own copies of the tables).
 
 # COMMAND ----------
 
@@ -103,7 +100,7 @@ fks = [r for r in key_cols if r.constraint_type == "FOREIGN KEY"]
 
 def add_constraint(table, ddl, label):
     try:
-        spark.sql(f"ALTER TABLE {q(catalog, team_schema, table)} ADD {ddl}")
+        spark.sql(f"ALTER TABLE {q(catalog, my_schema, table)} ADD {ddl}")
         print(f"✅ {label}")
     except Exception as e:
         msg = str(e).split("\n")[0]
@@ -119,7 +116,7 @@ for r in fks:
         print(f"⚠️  FK {r.constraint_name}: referenced key not found in the source schema, skipped")
         continue
     add_constraint(r.table_name,
-                   f"CONSTRAINT `{r.constraint_name}` FOREIGN KEY ({r.cols}) REFERENCES {q(catalog, team_schema, pk.table_name)} ({pk.cols})",
+                   f"CONSTRAINT `{r.constraint_name}` FOREIGN KEY ({r.cols}) REFERENCES {q(catalog, my_schema, pk.table_name)} ({pk.cols})",
                    f"FK {r.table_name}({r.cols}) → {pk.table_name}")
 
 if not key_cols:
@@ -135,9 +132,9 @@ if not key_cols:
 rows = []
 for t in tables:
     s = spark.table(f"{q(catalog, source_schema, t)}").count()
-    d = spark.table(f"{q(catalog, team_schema, t)}").count()
+    d = spark.table(f"{q(catalog, my_schema, t)}").count()
     rows.append((t, s, d, "✅" if s == d else "❌"))
-display(spark.createDataFrame(rows, "table string, source_rows long, team_rows long, match string"))
+display(spark.createDataFrame(rows, "table string, source_rows long, my_rows long, match string"))
 
 # COMMAND ----------
 
@@ -162,7 +159,7 @@ display(spark.sql(f"""
            round(100 * count_if(comment IS NOT NULL AND trim(comment) <> '') / count(*), 0) AS pct_described,
            concat_ws(', ', collect_list(column_name)) AS columns_to_describe
     FROM {isc}.columns
-    WHERE table_schema = '{team_schema}'
+    WHERE table_schema = '{my_schema}'
     GROUP BY table_name ORDER BY table_name
 """))
 
@@ -171,7 +168,7 @@ display(spark.sql(f"""
 # Metric views in your schema: none yet. You create them in Sprint 2.
 display(spark.sql(f"""
     SELECT count_if(table_type = 'METRIC_VIEW') AS metric_views, count_if(table_type IN ('MANAGED', 'EXTERNAL')) AS tables
-    FROM {isc}.tables WHERE table_schema = '{team_schema}'
+    FROM {isc}.tables WHERE table_schema = '{my_schema}'
 """))
 
 # COMMAND ----------
@@ -189,15 +186,15 @@ display(spark.sql(f"""
 # MAGIC | Genie joins the wrong tables | Check the **PK/FK constraints** (already copied), describe the key columns, or add the **metric view** to the space |
 # MAGIC | Genie's numbers differ from your dashboard | Point both at the **same metric view**, so they share one definition of each KPI |
 # MAGIC
-# MAGIC **Where to describe:** Catalog Explorer → `team_XX` → table → *Overview* (table description) and *Columns* (column descriptions), using
+# MAGIC **Where to describe:** Catalog Explorer → your schema → table → *Overview* (table description) and *Columns* (column descriptions), using
 # MAGIC **AI generate**, then **review and correct** it. Good descriptions say what the column means, its **unit and currency** (ZAR excl. VAT),
 # MAGIC the table's **grain**, what the **codes** mean, and common **synonyms**.
 # MAGIC
-# MAGIC **Where to build metric views:** Catalog Explorer → `team_XX` → *Create* → *Metric view* (or the SQL template in the attendee guide, Appendix A).
+# MAGIC **Where to build metric views:** Catalog Explorer → your schema → *Create* → *Metric view* (or the SQL template in the attendee guide, Appendix A).
 # MAGIC Give the measures and dimensions **business names** (`Sales`, `Margin %`, `Region`), so dashboards and Genie don't have to decode `nsv` or `rgn`.
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ✅ **Done.** Open **Catalog Explorer → your catalog → `team_XX`**, look at the tables and their lineage, and continue with Sprint 1.
+# MAGIC ✅ **Done.** Open **Catalog Explorer → your catalog → your schema**, look at the tables and their lineage, and continue with Sprint 1.
 # MAGIC Start with a quick dashboard as it is, then improve it with metric views (Sprint 2) and descriptions (Sprint 4a), and watch the results get better.

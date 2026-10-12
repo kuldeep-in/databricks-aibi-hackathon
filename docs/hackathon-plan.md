@@ -1,8 +1,8 @@
 # Databricks Hackathon: Perfect Store Command Centre
 
-**AI/BI Dashboards · Metric Views · Genie · Databricks Apps (optional)**
+**AI/BI Dashboards · Metric Views · Genie · Databricks Apps**
 
-**Format:** 4 hours, in person, hands-on · **Participants:** 20 (5 teams of 4) · **Workspace:** customer-provided, Unity Catalog enabled, no data yet
+**Format:** 4 hours, in person, hands-on · **Participants:** 20 (each working individually) · **Workspace:** customer-provided, Unity Catalog enabled, no data yet
 
 > Names in `<angle brackets>` are placeholders to confirm with the customer
 > (catalog name, group names, warehouse name).
@@ -18,7 +18,7 @@ Every module follows the same rhythm, so attendees get results within minutes an
 ```
  QUICK WIN (≈25 min)                      IMPROVE (≈35 min)                         PROVE IT
  ─────────────────────                    ─────────────────────                     ──────────────
- Dashboard straight on the team tables →  Rebuild on METRIC VIEWS (one definition →  Same numbers everywhere,
+ Dashboard straight on the attendee tables →  Rebuild on METRIC VIEWS (one definition →  Same numbers everywhere,
  using AI-assisted widgets                of Sales, Margin %, YoY, OSA %)            and less SQL per widget
 
  Genie space on the undocumented tables, →  1) DESCRIBE THE DATA in UC (table and    →  Genie accuracy score at
@@ -28,15 +28,15 @@ Every module follows the same rhythm, so attendees get results within minutes an
                                             expressions, metric views, benchmarks
 ```
 
-### Outcomes: by the end, each team has
+### Outcomes: by the end, each attendee has
 
 | # | Deliverable | Status |
 |---|---|---|
 | 1 | An **AI/BI Dashboard**: a quick version first, then rebuilt on metric views | **Core** |
-| 2 | One or more **UC Metric Views** that define the team's business KPIs once | **Core** |
-| 3 | **Documented data:** table and column descriptions on every table in the team schema, AI-generated and then reviewed by the team | **Core (key capability)** |
+| 2 | One or more **UC Metric Views** that define the attendee's business KPIs once | **Core** |
+| 3 | **Documented data:** table and column descriptions on every table in the attendee schema, AI-generated and then reviewed by the attendee | **Core (key capability)** |
 | 4 | A **Genie space** with a baseline accuracy score, a score after adding descriptions, and a final score after tuning (instructions, sample questions, metric views, and so on) | **Core** |
-| 5 | A **Databricks App** built with Genie Code: Tab 1 shows a data table, Tab 2 shows visuals | **Optional** (stretch track, see section 7) |
+| 5 | A **Databricks App** built with Genie Code: Tab 1 shows a data table, Tab 2 shows visuals | **Core** (section 7) |
 | 6 | A 3-minute demo showing the "before → after" improvement | **Core** |
 
 ### Theme (locked): "Perfect Store Command Centre: from sell-out to shelf"
@@ -52,73 +52,71 @@ already know the shape of the data, and the key insight (execution gaps costing 
 **Ground rules for the data:** fictional retailers, suppliers and brands only (no real client or retailer names), currency **ZAR**,
 a **South African** region/province store hierarchy, and a **March–February fiscal year**.
 
-All five challenge cards (section 8) are personas inside this one theme, so every team works with the same story and the same data.
+There is **one scenario for everyone** (section 8, `docs/scenario.md`): no options and no roles. Every attendee builds the same thing with the same data.
 
 ---
 
-## 2. Data strategy: one catalog, one source schema, a schema per team
+## 2. Data strategy: one catalog, one source schema, a schema per attendee
 
 ### Decision
 
-**One catalog for the whole hackathon, with one read-only source schema. Each team creates its own schema and copies the data into it.**
+**One catalog for the whole hackathon, with one read-only source schema. Each attendee creates their own schema and copies the data into it.**
 
 ```
 <hack_catalog>                          one catalog for the whole event
 ├── hack_14oct         (READ-ONLY)     ← facilitator loads the sample data here (single source of truth), with minimal descriptions on purpose
 │     ├── dim_* / fact_* tables
 │     └── visit_notes
-├── facilitator_kit    (FACILITATOR ONLY) ← answer keys: fully described reference tables, metric views, Genie config, starter dashboards
-├── team_01            (OWNED BY TEAM)  ← created by the team on the day; data copied from hack_14oct
-├── team_02
+├── jane_doe           (OWNED BY ATTENDEE) ← created by each attendee on the day; data copied from hack_14oct
+├── john_smith
 ├── ...
-└── team_05
+└── (one schema per attendee, 20 in total)
 ```
 
 **How it works**
 
 1. The facilitator builds `hack_14oct` before the day and makes it **read-only** for all participants.
-2. At the start, each team **creates its own schema** (`team_XX`) and **copies the source tables into it** with a ready-made script (section 3.2).
-3. From then on, teams work **only in their own schema**. Their dashboards, metric views, Genie space and (optional) app all point at `team_XX.*`.
-4. Teams **own the metadata** of their copy. They write the table and column descriptions themselves (section 5), and can change
+2. At the start, each attendee **creates their own schema** (named after them) and **copies the source tables into it** with a ready-made notebook (section 3.2).
+3. From then on, attendees work **only in their own schema**. Their dashboards, metric views, Genie space and app all point at it.
+4. Attendees **own the metadata** of their copy. They write the table and column descriptions themselves (section 5), and can change
    the copy freely (add columns, views, metric views, write-back) without affecting anyone else.
-5. `facilitator_kit` holds the "answer key" versions (reference metric views, a tuned Genie config, starter dashboards).
-   It isn't granted to participants, so teams build their own. The facilitator only shares pieces if a team gets stuck.
 
 **Why this model works**
 
 | Benefit | Detail |
 |---|---|
 | Simple to administer | One catalog, one data load, one small grant script |
-| Teams own their data **and its descriptions** | They can `COMMENT ON` tables and columns, accept AI-generated descriptions, `ALTER`, create metric views and write back without asking for grants. **This is why we copy instead of sharing one schema** |
-| Safe | `hack_14oct` is read-only. A team that breaks its own data just re-runs the copy script |
-| Teams grant their own app's access (optional App track) | The team owns its schema, so it can grant its app's service principal access itself |
-| Shows Unity Catalog in action | Ownership, grants, lineage (`hack_14oct` → `team_XX` → metric view → dashboard/Genie), cloning |
-| Easy cleanup | `DROP SCHEMA <hack_catalog>.team_XX CASCADE`, or drop the whole catalog |
+| Attendees own their data **and its descriptions** | They can `COMMENT ON` tables and columns, accept AI-generated descriptions, `ALTER`, create metric views and write back without asking for grants. **This is why we copy instead of sharing one schema** |
+| Safe | `hack_14oct` is read-only. An attendee that breaks its own data just re-runs the copy script |
+| Attendees grant their own app's access | Each attendee owns their schema, so they can grant their app's service principal access themselves |
+| Shows Unity Catalog in action | Ownership, grants, lineage (`hack_14oct` → `<attendee_schema>` → metric view → dashboard/Genie), cloning |
+| Easy cleanup | `DROP SCHEMA <hack_catalog>.<attendee_schema> CASCADE`, or drop the whole catalog |
 
 **Trade-offs to manage**
 
 - **Storage:** 5 copies. At about 5M rows that's small (a few hundred MB at most).
-- **Drift:** team numbers can differ after their changes. That's acceptable, because Genie test answers are checked against each team's own data.
-- **Constraints:** the copy script re-applies the PK/FK constraints, because Genie uses them for joins. Descriptions are deliberately left for the teams to write.
+- **Drift:** attendees' numbers can differ after their changes. That's acceptable, because Genie test answers are checked against each attendee's own data.
+- **Constraints:** the copy script re-applies the PK/FK constraints, because Genie uses them for joins. Descriptions are deliberately left for the attendees to write.
 
-### Team structure
+### Working individually
 
-- **5 teams of 4.** Each team has a mix of roles: 1 analyst/BI person, 1 business SME, 1–2 technical people (the App track is optional).
-- **Schema naming is fixed:** `team_01` … `team_05`.
-- **Ownership:** one member creates the schema, then transfers ownership to the team group (`ALTER SCHEMA ... OWNER TO team_XX`).
-- **Asset naming:** dashboard `T03 – Trade Performance`, metric view `team_03.mv_sales`, Genie space `T03 – Trade Genie`, app `t03-command-centre`.
+- **20 attendees, each on their own**, each in their own schema. There are no attendees.
+- **Everyone does the same scenario** (section 8). No options, no special roles.
+- **Schema naming:** `01_attendee_setup` names the schema after the attendee's user name (for example `jane_doe`), unless they choose another name.
+- **Ownership:** whoever creates the schema owns it, so no ownership transfer is needed.
+- **Asset naming:** start with the attendee's initials: dashboard `JD – Trade Performance`, Genie space `JD – Trade Genie`, app `jd-command-centre`. Metric views go in the attendee's schema (`jane_doe.mv_sales`).
 
 ### Fallback (if the customer can't create a new catalog)
 
-Use one existing catalog that the customer assigns, and create `hack_14oct`, `facilitator_kit` and the team schemas inside it. Nothing else changes.
+Use one existing catalog that the customer assigns, and create `hack_14oct` and the attendee schemas inside it. Nothing else changes.
 
 ---
 
 ## 3. Sample data design
 
-> **Status:** the data is **synthetic and generated** by the `03_generate_synthetic_data` notebook, which Step 3 of
-> `00_facilitator_runbook` calls. It writes the tables below **directly as Delta tables** in `hack_14oct`. Each team then copies them
-> into its own schema with `01_team_setup`.
+> **Status:** the data is **synthetic and generated** by the `02_generate_synthetic_data` notebook, which Step 3 of
+> `00_facilitator_runbook` calls. It writes the tables below **directly as Delta tables** in `hack_14oct`. Each attendee then copies them
+> into its own schema with `01_attendee_setup`.
 > The attendee guide, metric view template, Genie test questions and app prompts refer to these table and column names.
 
 The data needs to be *realistic and full of insight* (seasonality, under-performing regions, promo uplift, out-of-stock patterns) so that Genie
@@ -147,8 +145,7 @@ and the dashboards have something to find.
 - **"Trap" questions for Genie:** ambiguous terms such as "sales" (gross or net?), "last quarter" (calendar or fiscal?), and "top stores"
   (by sales or by growth?). The raw-table Genie gets these wrong, and the tuned Genie gets them right. That's the before/after story.
 
-**Data checklist (facilitator, before T-3 days):** run Step 3 (generate), check that the data contract is all ✅, add the PK/FK constraints (Step 5), and build the fully described copy in `facilitator_kit` (Step 6).
-keep the business abbreviations, the insights are planted, there are no real client names, and the fully described copy is in `facilitator_kit`.
+**Data checklist (facilitator, before T-3 days):** run runbook Step 3 (generate the data, then check that every table is ✅) and Step 4 (PK/FK constraints).
 
 ### 3.1a Description strategy: undocumented on purpose
 
@@ -156,39 +153,33 @@ Writing descriptions is a **key capability to showcase**, so the `hack_14oct` ta
 
 | Where | What it contains | Why |
 |---|---|---|
-| `hack_14oct.*` (what teams copy) | **No descriptions and no metric views.** Cryptic, inconsistent column names (`str_id`, `sku`, `qty`, `nsv`, `gp`, `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt`) and coded values (`fmt_cd` HYP/SUP/CNV/WHS, `sts` O/C, `prm_typ` PR/MB/BN) | Like real source systems. Dashboards and Genie must guess until teams describe the data and build metric views, which gives a clear baseline |
-| `facilitator_kit.*` (answer key) | The same tables with full table and column descriptions, synonyms and tags | Used to mark team descriptions, and as a fallback if a team runs out of time |
+| `hack_14oct.*` (what attendees copy) | **No descriptions and no metric views.** Cryptic, inconsistent column names (`str_id`, `sku`, `qty`, `nsv`, `gp`, `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt`) and coded values (`fmt_cd` HYP/SUP/CNV/WHS, `sts` O/C, `prm_typ` PR/MB/BN) | Like real source systems. Dashboards and Genie must guess until attendees describe the data and build metric views, which gives a clear baseline |
 
-This makes the impact of descriptions **measurable**: teams record their Genie score before and after describing the data (section 5).
+This makes the impact of descriptions **measurable**: attendees record their Genie score before and after describing the data (section 5).
 
-### 3.2 Team copy script (each team runs it in the first 10 minutes)
+### 3.2 Attendee setup notebook (each attendee runs it in Sprint 0)
 
-The facilitator provides one parameterised notebook, `01_team_setup`. A team member sets `team_schema = team_XX` and clicks **Run all** (about 2–3 minutes).
+The facilitator provides one notebook, `01_attendee_setup`. Each attendee enters the catalog and clicks **Run all** (about 1–2 minutes). It does this:
 
 ```sql
--- Parameter: :team_schema  (for example 'team_03')
-USE CATALOG <hack_catalog>;
+-- 1. Create the attendee's own schema (named after the user by default, for example jane_doe)
+CREATE SCHEMA IF NOT EXISTS <catalog>.jane_doe COMMENT 'Perfect Store hackathon: working schema, copied from hack_14oct';
 
--- 1. Create the team schema and hand ownership to the team group
-CREATE SCHEMA IF NOT EXISTS IDENTIFIER(:team_schema)
-  COMMENT 'Hackathon working schema – copied from hack_14oct';
-ALTER SCHEMA IDENTIFIER(:team_schema) OWNER TO `team_03`;   -- the team's group
-
--- 2. Copy every source table. DEEP CLONE makes an independent copy (the minimal source comments come along).
+-- 2. Copy every source table. DEEP CLONE makes an independent copy.
 --    (The notebook loops over information_schema.tables, so the list never goes stale.)
-CREATE OR REPLACE TABLE IDENTIFIER(:team_schema || '.fact_sales_weekly') DEEP CLONE hack_14oct.fact_sales_weekly;
+CREATE OR REPLACE TABLE <catalog>.jane_doe.fact_sales_weekly DEEP CLONE <catalog>.hack_14oct.fact_sales_weekly;
 -- ... the same for every dim_* / fact_* / visit_notes table
 
--- 3. Re-apply the PK/FK constraints (generated from the source definitions)
--- 4. Validation: row counts match hack_14oct, and constraints are present
+-- 3. Re-apply the PK/FK constraints (read from the source)
+-- 4. Validation: row counts match hack_14oct, plus hints: 0% described and no metric views yet
 ```
 
-> Metric views and descriptions are **not** pre-built in team schemas. Building them is the hackathon exercise (Sprints 2 and 4).
+> Metric views and descriptions are **not** pre-built in attendee schemas. Building them is the hackathon exercise (Sprints 2 and 4).
 
 | Copy method | Pros | Cons | Use it |
 |---|---|---|---|
 | `DEEP CLONE` | Independent copy, keeps comments and properties, safe to change | Copies the storage (small here) | **Default** |
-| `SHALLOW CLONE` | Instant, and no data is copied | Depends on the source files, so team tables can break if the source is rebuilt | Only if the data is very large |
+| `SHALLOW CLONE` | Instant, and no data is copied | Depends on the source files, so attendee tables can break if the source is rebuilt | Only if the data is very large |
 | `CREATE TABLE AS SELECT` | Simplest to understand | Loses comments and constraints | Teaching moment only |
 
 ---
@@ -206,7 +197,7 @@ same thing everywhere.
 | Each widget repeats its own SQL (`SUM(sales)/SUM(...)`) | Each widget picks a measure: `MEASURE(\`Margin %\`)` |
 | Ratios are often wrong when re-aggregated (an average of averages) | Ratio measures re-aggregate correctly at any grain |
 | Genie guesses the joins and what "sales" means | Genie gets the joins, definitions and synonyms from the metric view |
-| Different teams get different numbers | One governed definition, with lineage in Catalog Explorer |
+| Different attendees get different numbers | One governed definition, with lineage in Catalog Explorer |
 
 ### Exercise ladder (Sprint 2)
 
@@ -218,22 +209,22 @@ same thing everywhere.
 | **L4: Make it discoverable** | Add comments, display names and synonyms to the measures and dimensions | Genie and dashboard users understand the fields |
 | **L5: Reuse it** | Switch the dashboard datasets to the metric views, and add the metric views to the Genie space | The before/after comparison for the demo |
 
-### Answer key (attendees get a partly filled starter with TODOs in the attendee guide, Appendix A)
+### Reference solution (attendees get a partly filled starter with TODOs in the attendee guide, Appendix A)
 
 ```sql
-CREATE OR REPLACE VIEW <hack_catalog>.team_03.mv_sales
+CREATE OR REPLACE VIEW <hack_catalog>.jane_doe.mv_sales
 WITH METRICS
 LANGUAGE YAML
 AS $$
 version: 1.1                      # use the version in the current docs
 comment: "Weekly trade performance – governed sales KPIs"
-source: <hack_catalog>.team_03.fact_sales_weekly
+source: <hack_catalog>.jane_doe.fact_sales_weekly
 joins:
   - name: store
-    source: <hack_catalog>.team_03.dim_store
+    source: <hack_catalog>.jane_doe.dim_store
     on: source.str_id = store.str_id
   - name: product
-    source: <hack_catalog>.team_03.dim_product
+    source: <hack_catalog>.jane_doe.dim_product
     on: source.sku = product.sku
 dimensions:
   - name: Week
@@ -261,13 +252,13 @@ $$;
 
 -- Use it
 SELECT Region, MEASURE(Sales) AS sales, MEASURE(`Margin %`) AS margin_pct
-FROM <hack_catalog>.team_03.mv_sales
+FROM <hack_catalog>.jane_doe.mv_sales
 GROUP BY ALL
 ORDER BY sales DESC;
 ```
 
-> Teams can also build metric views in the **Catalog Explorer UI** (with the Assistant's help) instead of writing YAML. Both routes are valid.
-> Column names match `03_generate_synthetic_data` (cryptic on purpose; see its `RENAMES` map).
+> Attendees can also build metric views in the **Catalog Explorer UI** (with the Assistant's help) instead of writing YAML. Both routes are valid.
+> Column names match `02_generate_synthetic_data` (cryptic on purpose; see its `RENAMES` map).
 
 ---
 
@@ -275,27 +266,26 @@ ORDER BY sales DESC;
 
 ### Quick win (Sprint 3)
 
-1. Create a Genie space on the team's tables as they are: **undocumented** (`fact_sales_weekly`, the dims, and `fact_store_visits`).
-2. Ask the team's **10 test questions** (handed out per challenge card, with expected answers).
-3. Record the **baseline score** (for example 4/10) on the team scoreboard.
+1. Create a Genie space on the attendee's tables as they are: **undocumented** (`fact_sales_weekly`, the dims, and `fact_store_visits`).
+2. Ask the **10 test questions** from `docs/scenario.md` (the expected answers are facilitator-only).
+3. Record the **baseline score** (for example 4/10) on the attendee scoreboard.
 
 ### Sprint 4a: describe your data in Unity Catalog (key capability)
 
-The team owns its schema, so it can document every table and column itself. **The descriptions are written once in Unity Catalog and
+Each attendee owns their schema, so they can document every table and column themselves. **The descriptions are written once in Unity Catalog and
 then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboard authoring, metric views, and search in Catalog Explorer.
 
 | Step | How | Tip |
 |---|---|---|
-| **1. AI-generated table descriptions** | Catalog Explorer → table → **Overview** → *AI generate* the description → review → **Accept** or edit | AI gives a first draft. The business SME on the team makes it correct |
+| **1. AI-generated table descriptions** | Catalog Explorer → table → **Overview** → *AI generate* the description → review → **Accept** or edit | AI gives a first draft. The attendee reviews it and makes it correct |
 | **2. AI-generated column descriptions** | Catalog Explorer → **Columns** tab → AI-suggested descriptions → accept or edit each one | Concentrate on the columns behind the test questions and the abbreviations (`nsv`, `osa_pct`, `fy_wk`) |
-| **3. Fix them in SQL (optional, faster in bulk)** | `COMMENT ON TABLE team_03.fact_sales_weekly IS '...';` and `ALTER TABLE team_03.fact_sales_weekly ALTER COLUMN nsv COMMENT 'Net sales value in ZAR, excl. VAT';` | Ask the Assistant to draft the statements for a whole table |
-| **4. Tags (stretch)** | Add governed tags such as `domain=sales`, `kpi=true`, `pii=false` | Shows governance and makes data easier to find |
+| **3. Fix them in SQL (faster in bulk)** | `COMMENT ON TABLE jane_doe.fact_sales_weekly IS '...';` and `ALTER TABLE jane_doe.fact_sales_weekly ALTER COLUMN nsv COMMENT 'Net sales value in ZAR, excl. VAT';` | Ask the Assistant to draft the statements for a whole table |
+| **4. Tags** | Add governed tags such as `domain=sales`, `kpi=true`, `pii=false` | Shows governance and makes data easier to find |
 | **5. Re-score Genie** | Ask the same 10 questions again, **without changing anything else** | Record the **"after descriptions" score**. This isolates the value of good metadata |
 
 **What a good description includes** (on the attendee guide cheat-sheet): the business meaning, the **unit and currency**, the **grain**
 ("one row per store, SKU and week"), allowed values or codes, **abbreviations spelled out**, and common synonyms ("OSA, availability, in-stock").
 
-> Facilitator scoring tip: compare 3–4 team descriptions with the `facilitator_kit` answer key during the sprint, and call out a great one to the room.
 
 ### Sprint 4b: Genie tuning ladder. Each step should move the score further
 
@@ -310,44 +300,43 @@ then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboar
 | **G7: Trusted assets** | UC SQL functions for parameterised business questions | `fn_store_scorecard(store_id)` | Answers marked as trusted |
 | **G8: Benchmarks** | Load the 10 test questions with expected SQL as benchmarks, and run the evaluation | Accuracy goes from 5/10 to 9/10 | A **proven** improvement, which becomes the demo slide |
 
-**Scoreboard:** a shared sheet (or the facilitator's screen) shows each team's Genie score in three columns: **baseline → after descriptions → final**. It's a friendly competition
+**Scoreboard:** a shared sheet (or the facilitator's screen) shows each attendee's Genie score in three columns: **baseline → after descriptions → final**. It's a friendly competition
 and makes the value of tuning very visible.
 
 ---
 
-## 6. Agenda (4 hours, core track)
+## 6. Agenda (4 hours)
 
 | Time | Sprint | Content | Checkpoint |
 |---|---|---|---|
-| 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, teams, rules and judging | Teams formed |
-| 0:15 – 0:30 | **Sprint 0: Team setup** | Run `01_team_setup` (create `team_XX`, copy the data from `hack_14oct`), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
-| 0:30 – 1:00 | **Sprint 1: Dashboard quick win** | 5 min demo, then 25 min build: a dashboard straight on the team tables, using the AI assistant to create widgets, plus filters, then publish | **First dashboard published** |
+| 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, rules and judging, and the scenario | Ready |
+| 0:15 – 0:30 | **Sprint 0: Attendee setup** | Run `01_attendee_setup` (create your own schema, copy the data from `hack_14oct`), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
+| 0:30 – 1:00 | **Sprint 1: Dashboard quick win** | 5 min demo, then 25 min build: a dashboard straight on the attendee tables, using the AI assistant to create widgets, plus filters, then publish | **First dashboard published** |
 | 1:00 – 1:45 | **Sprint 2: Metric views** | 10 min demo, then 35 min build: metric view ladder L1–L5, and switch the dashboard to the metric views | **Dashboard v2 on metric views** |
 | 1:45 – 1:55 | Break | | |
 | 1:55 – 2:20 | **Sprint 3: Genie quick win** | 5 min demo, then 20 min build: a Genie space on the undocumented tables, with the 10 test questions | **Baseline score recorded** |
-| 2:20 – 2:40 | **Sprint 4a: Describe your data** | 5 min demo, then 15 min build: AI-generated table and column descriptions, reviewed and edited by the team, then Genie re-scored | **"After descriptions" score recorded** |
+| 2:20 – 2:40 | **Sprint 4a: Describe your data** | 5 min demo, then 15 min build: AI-generated table and column descriptions, reviewed and edited by the attendee, then Genie re-scored | **"After descriptions" score recorded** |
 | 2:40 – 3:10 | **Sprint 4b: Genie tuning** | 5 min demo, then 25 min build: tuning ladder G1–G8, including adding the metric views | **Final score recorded** |
-| 3:10 – 3:30 | **Sprint 5: Choose a track** | **(a) Polish:** dashboard layout, schedules, Genie embedded in the dashboard; **(b) AI Functions:** classify `visit_notes` with `ai_classify`/`ai_query` and add the result to the dashboard; **(c) Optional App track** (section 7) | Demo ready |
-| 3:30 – 3:55 | **Demos** | 5 teams × 4 min: show **before → after** (dashboard v1 → v2, Genie score baseline → final) | |
+| 3:10 – 3:30 | **Sprint 5: App** | 5 min demo, then 15 min build with Genie Code: Tab 1 data table (deploy), then Tab 2 visuals (section 7) | **App deployed** |
+| 3:30 – 3:55 | **Demos** | 5 volunteers × 4 min: show **before → after** (dashboard v1 → v2, Genie score baseline → final) | |
 | 3:55 – 4:00 | **Awards and wrap-up** | Winner, next steps, survey | |
 
-> **Nobody gets stuck:** if a team misses a checkpoint, the facilitator gives it the starter asset from `facilitator_kit` (a starter dashboard,
-> a reference metric view, a baseline Genie config) and it carries on with the next sprint.
+> **Nobody gets stuck:** if an attendee misses a checkpoint, a helper sits with them and they carry on with the next sprint.
 
 ---
 
-## 7. Optional: Databricks Apps track (2 stages, built with Genie Code)
+## 7. Databricks App (2 stages, built with Genie Code)
 
-Include the App track only if the customer wants it **and** the workspace supports it (confirm at T-2 weeks).
-Teams **don't write the app by hand**. They describe what they want to **Genie Code** (the AI coding agent in the workspace), then
+Everyone builds the app in Sprint 5. Confirm at T-2 weeks that the workspace supports Databricks Apps and Genie Code.
+Attendees **don't write the app by hand**. They describe what they want to **Genie Code** (the AI coding agent in the workspace), then
 review and deploy what it builds. The app has two tabs, built one stage at a time:
 
 ```
  ┌──────────────────────────────────────────────────────────────┐
- │  T03 Command Centre                                          │
+ │  JD Command Centre                                           │
  │  [ Tab 1: Data ]  [ Tab 2: Insights ]                        │
  ├──────────────────────────────────────────────────────────────┤
- │  Stage 1 → Tab 1: filterable TABLE of the team's data        │
+ │  Stage 1 → Tab 1: filterable TABLE of the attendee's data        │
  │  Stage 2 → Tab 2: VISUALS (KPI tiles + charts), same filters │
  └──────────────────────────────────────────────────────────────┘
 ```
@@ -356,13 +345,13 @@ review and deploy what it builds. The app has two tabs, built one stage at a tim
 
 | | |
 |---|---|
-| **Goal** | A deployed app with one tab that shows a filterable table from the team's **metric view** (or tables) |
-| **Data** | `team_XX.mv_sales`, queried with `MEASURE()`, through the SQL warehouse attached as an app resource |
+| **Goal** | A deployed app with one tab that shows a filterable table from the attendee's **metric view** (or tables) |
+| **Data** | `<attendee_schema>.mv_sales`, queried with `MEASURE()`, through the SQL warehouse attached as an app resource |
 | **Done when** | The app URL opens, the table loads, and the filters (Region, Retailer, Category, Week range) work |
 
 **Starter prompt for Genie Code:**
 > Build a Streamlit Databricks App called "T03 Command Centre" with two tabs: "Data" and "Insights". Leave "Insights" empty for now.
-> On the "Data" tab, query `<hack_catalog>.team_03.mv_sales` through the SQL warehouse app resource, using `MEASURE()` for
+> On the "Data" tab, query `<hack_catalog>.jane_doe.mv_sales` through the SQL warehouse app resource, using `MEASURE()` for
 > Sales, Units and Margin %, grouped by Region, Retailer, Category and Week. Show the result as a sortable table, with sidebar filters
 > for Region, Retailer, Category and a week range. Format currency as ZAR and Margin % as a percentage. Cache the query results.
 
@@ -379,57 +368,40 @@ review and deploy what it builds. The app has two tabs, built one stage at a tim
 > a weekly sales trend line chart and a bar chart of sales by Region. Use the same sidebar filters as the "Data" tab, and keep a
 > consistent colour palette.
 
-### Tips for teams
+### Tips for attendees
 
 - **Iterate in small prompts:** "make the table paginated", "add a download-as-CSV button", "show a Margin % below 20% in red".
 - **Use the metric views.** The app then shows exactly the same numbers as the dashboard and Genie, which is a good demo point.
 - **Keep the app's start command and port as Genie Code or the template set them.** The app must listen on the port the platform gives it,
   or it shows as running but won't load.
-- **Stretch (bonus only):** a third tab with Genie chat through the Genie Conversation API, or embed the published dashboard.
-
-### Timing options
-
-| Option | How | Trade-off |
-|---|---|---|
-| **Stretch track (default)** | In Sprint 5 (20 min), the technical members of a team build Stages 1 and 2 while the others polish | No change to the core agenda. Stage 2 may be partial |
-| **Full App module** | Shorten Sprint 1 and Sprint 3 to 20 min each, and make Sprint 5 a 45-min App module | Both stages fit comfortably, but there's less time for the dashboard and Genie improvement story |
 
 ### Prerequisites (facilitator)
 
 - Confirm that **Genie Code** and **Databricks Apps** are enabled in the workspace, and test both prompts end to end in the dry run (T-2 days).
-- Pre-create the 5 apps (`t03-command-centre` and so on) the day before, with the SQL warehouse already added as an app resource. Teams then
-  only change the code.
+- Each attendee creates their own app (`jd-command-centre`), adding the SQL warehouse as an app resource. **Check the workspace app quota (20+)**,
+  or pre-create the apps the day before so attendees only change the code.
 - Each app runs as its own **service principal**. Give it `USE CATALOG` on `<hack_catalog>` (facilitator), and `CAN USE` on the warehouse
-  (through the app resource). The app is read-only, so teams grant only `SELECT` on their own schema:
+  (through the app resource). The app is read-only, so attendees grant only `SELECT` on their own schema:
   ```sql
-  GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.team_03 TO `<app-sp-application-id>`;
+  GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.jane_doe TO `<app-sp-application-id>`;
   ```
-- Keep a working reference app (both tabs) in `starter-assets/` in case Genie Code gets stuck.
 
 ---
 
-## 8. Challenge cards (one per team, all inside the Perfect Store Command Centre theme)
+## 8. The scenario (the same for everyone)
 
-Each scenario has its own attendee instruction document in `scenarios/`:
+**Monday Command Centre** (`docs/scenario.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
 
-| # | Team | Persona | Challenge | Suggested metric views | Document |
-|---|---|---|---|---|---|
-| A | 01 | **Supplier Account Manager** | "How is my brand performing vs the category and vs budget, and where am I losing share?" | `mv_sales`, `mv_budget` | `scenarios/A-supplier-account-manager.md` |
-| B | 02 | **Field Operations Manager** | "Which stores and reps drive the best OSA and compliance, and where should reps go next week?" | `mv_execution`, `mv_sales` | `scenarios/B-field-operations-manager.md` |
-| C | 03 | **Trade Marketing Manager** | "Which promotions actually deliver profitable uplift?" | `mv_sales`, `mv_promo` | `scenarios/C-trade-marketing-manager.md` |
-| D | 04 | **Client Executive** | "One-page Monday business overview, with drill-downs for 'why?'" | `mv_sales`, `mv_budget`, `mv_execution` | `scenarios/D-client-executive.md` |
-| E | 05 | **Insights Analyst** | "What do merchandisers say in visit notes, and how does it link to OSA and sales?" (AI Functions from the start) | `mv_notes`, `mv_execution` | `scenarios/E-insights-analyst.md` |
+| Part | What everyone builds |
+|---|---|
+| Dashboard | v1 on the tables, then v2 on metric views: an executive page plus a "Why?" drill-down page |
+| Metric views | `mv_sales` (Sales, Units, Margin, Margin %, YoY, Promo Sales), `mv_budget` (Budget, Variance %), `mv_execution` (Avg OSA %, POG compliance %, % of stores below target) |
+| Descriptions | Every table and column in their schema, AI-generated and then reviewed |
+| Genie | 10 test questions, with the score recorded at baseline, after descriptions, and final |
+| App | Tab 1 data table and Tab 2 visuals, built with Genie Code |
 
-Each card comes with **10 Genie test questions** with expected answers, including 3–4 "trap" questions that need tuning to answer correctly.
-
-### Minimum vs stretch
-
-| Area | Minimum (must have) | Stretch (bonus points) |
-|---|---|---|
-| Dashboard | v1 on tables, then v2 on metric views: 2 pages, at least 6 visuals, global filters, published | Drill-through, scheduled subscription, Genie embedded in the dashboard |
-| Metric views | 1 metric view with at least 4 measures, including one ratio | 2 or more metric views, YoY and filtered measures, synonyms and display names |
-| Genie | Baseline score, then instructions + sample questions + metric view added, with the final score recorded | SQL expressions, example SQL, trusted functions, benchmarks run |
-| App (optional) | — | Stage 1: deployed app with a filterable data table (Tab 1). Stage 2: visuals tab (Tab 2). Bonus: Genie chat tab |
+The 10 Genie test questions include 3–4 "trap" questions (sales = NSV, fiscal year March–February, "last week", the OSA target)
+that only get answered correctly after describing the data and tuning.
 
 ---
 
@@ -437,80 +409,74 @@ Each card comes with **10 Genie test questions** with expected answers, includin
 
 | # | Item | Owner | When |
 |---|---|---|---|
-| 1 | Confirm the region supports **Serverless SQL**, **Genie**, **Metric Views**, **Foundation Model APIs** (AI Functions) and, if the App track is used, **Databricks Apps** | Databricks | T-2 weeks |
+| 1 | Confirm the region supports **Serverless SQL**, **Genie**, **Metric Views**, **Foundation Model APIs** and **Databricks Apps** | Databricks | T-2 weeks |
 | 2 | Turn on **partner-powered AI features** and the Databricks Assistant | Customer admin | T-2 weeks |
 | 3 | Create the catalog `<hack_catalog>` (with a managed storage location if the metastore has no default) | Customer admin | T-2 weeks |
-| 4 | Create the account group `<hackathon_participants>` (20 users) and the `team_01`…`team_05` groups | Customer admin | T-1 week |
+| 4 | Create the account group `<hackathon_participants>` (20 users) | Customer admin | T-1 week |
 | 5 | Make the facilitator the owner of `<hack_catalog>`, and give participants `USE CATALOG` + `CREATE SCHEMA` on it | Customer admin | T-1 week |
 | 6 | Create **2 serverless SQL warehouses** (Medium, autoscale 1–3), with `CAN USE` for the participants | Customer admin / facilitator | T-1 week |
-| 7 | *(App track only)* Confirm Genie Code and Apps are enabled, the app quota is ≥ 10, and the 5 apps are pre-created | Customer admin / facilitator | T-1 week |
-| 8 | Load `hack_14oct` and `facilitator_kit`, run the grant script, and smoke-test as a non-admin user | Facilitator | T-3 days |
+| 7 | Confirm Genie Code and Apps are enabled and the app quota is ≥ 20 (or pre-create the apps) | Customer admin / facilitator | T-1 week |
+| 8 | Generate `hack_14oct` (runbook), run the grants, and test as an attendee (non-admin user) | Facilitator | T-3 days |
 | 9 | Dry run as a test participant through every sprint, then drop the test schema | Facilitator | T-2 days |
 | 10 | Make sure every user can log in (SSO/MFA) to the workspace URL | Customer | T-1 day |
 
 ### Grant script (run once by the facilitator)
 
 ```sql
--- Catalog: everyone can enter it and create their team schema
+-- Catalog: everyone can enter it and create their own schema
 GRANT USE CATALOG, CREATE SCHEMA ON CATALOG <hack_catalog> TO `<hackathon_participants>`;
 
 -- Source schema: read-only for participants
 GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.hack_14oct TO `<hackathon_participants>`;
 
--- facilitator_kit: no grants to participants (answer keys)
 ```
 
-Team schemas need **no facilitator grants**, because each team owns its schema. Teams can share their work with everyone for the demos:
-`GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.team_03 TO \`<hackathon_participants>\`;`
-
-> **Guardrail:** `CREATE SCHEMA` on the catalog means anyone *could* create extra schemas. The convention is `team_XX` only, and the
-> facilitator checks `SHOW SCHEMAS IN <hack_catalog>` after Sprint 0. For tighter control, the facilitator pre-creates the 5 empty
-> schemas owned by the team groups, and teams only run the copy part of the script.
+Attendee schemas need **no facilitator grants**, because each attendee owns the schema they create. To show their work in the demos,
+an attendee can run `GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.jane_doe TO \`<hackathon_participants>\`;`
 
 ---
 
-## 10. Facilitator kit (prepare in this folder)
+## 10. Materials
 
 ```
 databricks-aibi-hackathon/
-├── hackathon-plan.md              ← this file
-├── notebooks/                     ← import into your workspace (keep docs/ next to them)
-│   ├── 00_facilitator_runbook     ← ✅ created: step-by-step setup and test, including Step 3 synthetic data as Delta tables in hack_14oct
-│   ├── 01_team_setup              ← ✅ created: teams copy every table from hack_14oct to team_XX
-│   └── 02_apply_reference_descriptions ← ✅ created: fallback that applies the answer-key descriptions to a team schema
-│       (grants, answer-key build, metric view reference and smoke tests are all steps inside 00_facilitator_runbook)
-├── attendee-guide.md              ← ✅ created: login, naming, sprint-by-sprint steps, cheat-sheets, Genie Code prompts
-├── scenarios/                     ← ✅ created: one attendee instruction document per scenario (A–E)
-├── genie-test-answers.md          ← facilitator only: expected answers and SQL for the 10 questions per scenario (also used as benchmarks)
-├── scoreboard.md / sheet          ← Genie baseline → final per team
-├── starter-assets/                ← fallback dashboard JSON, Genie space config, (optional) reference 2-tab app
-└── judging-rubric.md
+├── README.md
+├── docs/
+│   ├── hackathon-plan.md          ← this file
+│   ├── attendee-guide.md          ← attendee instructions, sprint by sprint, cheat-sheets, Genie Code prompts
+│   └── scenario.md                ← the one scenario everyone builds
+└── notebooks/
+    ├── 00_facilitator_runbook     ← facilitator: create hack_14oct, generate the data, constraints, grants, test
+    ├── 01_attendee_setup          ← every attendee: create their own schema and copy every table from hack_14oct
+    └── 02_generate_synthetic_data ← synthetic data generator (called by the runbook)
 ```
 
-**Staffing:** 1 lead facilitator and 1–2 floating helpers (about 1 helper per 2 teams). One of them owns the scoreboard and, if the App track runs, the app SP grants.
+A shared **scoreboard** (a sheet is enough) tracks each attendee's Genie score: baseline → after descriptions → final.
+
+**Staffing:** 1 lead facilitator and 2 floating helpers (about 1 helper per 10 attendees). One of them owns the scoreboard and the app SP grants.
 
 ---
 
-## 11. Judging rubric (100 points, +10 bonus)
+## 11. Judging rubric (100 points)
 
 | Criterion | Points |
 |---|---|
-| Business value and storytelling (clear persona, insight, and action) | 20 |
+| Business value and storytelling (insight and action) | 15 |
 | Dashboard quality (v2: clarity, interactivity, correctness) | 15 |
 | Metric views (coverage, correct ratio/YoY measures, metadata, reused in the dashboard and Genie) | 15 |
-| **Data descriptions** (coverage and quality of table and column descriptions compared with the answer key, tags) | 15 |
+| **Data descriptions** (coverage and quality of table and column descriptions) | 15 |
 | Genie: final accuracy on the test questions | 15 |
-| Genie: **improvement** from baseline to final, and the tuning techniques used | 10 |
-| Creativity and use of AI features (AI Functions, AI-assisted authoring) | 10 |
-| **Bonus:** Databricks App (optional track): Stage 1 table (+5), Stage 2 visuals (+5) | +10 |
+| Genie: **improvement** from baseline to final | 10 |
+| App: Tab 1 table (5) and Tab 2 visuals (5) | 10 |
+| Use of AI features (AI-assisted authoring, Genie Code) | 5 |
 
 ---
 
 ## 12. Compute and cost guardrails
 
-- 2 serverless SQL warehouses (Medium, auto-stop 10 minutes). Teams 1–3 use warehouse A and teams 4–5 use warehouse B.
-- Fact table of at most around 5M rows, so queries return in seconds.
-- *(App track)* At most 1 app per team, and stop all apps at the end of the day.
+- 1–2 serverless SQL warehouses (Medium, autoscale, auto-stop 10 minutes) for 20 attendees.
+- About 350K weekly sales rows, so queries return in seconds.
+- At most 1 app per attendee (check the workspace app quota), and stop all apps at the end of the day.
 - Optional: set a budget policy or tag (`project=hackathon`) to track spend.
 - Everything is serverless, so there are no clusters to configure.
 
@@ -522,14 +488,13 @@ databricks-aibi-hackathon/
 |---|---|
 | A feature isn't enabled (Genie, Metric Views, FMAPI, Apps) | Validate at T-2 weeks, and do the dry run as a non-admin user |
 | Users can't log in or lack entitlements | Login check at T-1 day, and one spare test account |
-| Teams fall behind a checkpoint | Starter assets in `facilitator_kit` for every sprint |
-| Metric view YAML errors slow teams down | A working template in the guide, the UI-based route plus the Assistant, and the reference view as a fallback |
+| Attendees fall behind a checkpoint | Helpers sit with them, and they carry on with the next sprint |
+| Metric view YAML errors slow attendees down | The partly filled starter in the guide, the UI-based route, and the Assistant |
 | Genie baseline is already "too good" (no visible improvement) | Leave `hack_14oct` undocumented, use business abbreviations in column names, and plant ambiguous "trap" questions and fiscal-calendar rules in the test set |
-| AI-generated descriptions are accepted without review, so they're plausible but wrong | The business SME on each team reviews them, the answer key is used for scoring, and the scoreboard shows whether descriptions actually helped |
-| A team runs out of time in Sprint 4a | The facilitator gives it a script that applies the answer-key descriptions for the remaining tables |
-| A team breaks its data | Re-run `01_team_setup`. `hack_14oct` is read-only |
+| AI-generated descriptions are accepted without review, so they're plausible but wrong | Each attendee reviews them, and the scoreboard shows whether descriptions actually helped |
+| An attendee breaks its data | Re-run `01_attendee_setup`. `hack_14oct` is read-only |
 | Extra or oddly named schemas | Naming convention, and a facilitator check after Sprint 0 |
-| *(App track)* The app SP has no access | Pre-created apps, with the SP given `USE CATALOG` and warehouse access in advance; teams grant schema access themselves |
+| The app SP has no access | Pre-created apps, with the SP given `USE CATALOG` and warehouse access in advance; attendees grant schema access themselves |
 
 ---
 
@@ -537,13 +502,13 @@ databricks-aibi-hackathon/
 
 **Post-hackathon**
 - Share the winning assets, and keep the best metric views, dashboard and Genie space as a reference.
-- Cleanup: drop the team schemas (or the catalog), stop or delete any apps, and remove the groups. **Agree with the customer what to keep before deleting anything.**
-- Follow-up: pick 1–2 real use cases from the challenge cards for a POC on the customer's real data, starting with metric views as the semantic layer.
+- Cleanup: drop the attendee schemas (or the catalog), stop or delete any apps, and remove the groups. **Agree with the customer what to keep before deleting anything.**
+- Follow-up: pick 1–2 real use cases from the scenario for a POC on the customer's real data, starting with metric views as the semantic layer.
 
 **Open decisions to confirm with the customer**
 1. Catalog name, and whether a new catalog can be created (or which existing one to use).
 2. ~~Theme~~: **locked:** Perfect Store Command Centre.
-3. Whether the App track is in scope (stretch or full module). Genie Code builds the app, and Streamlit is the suggested framework.
-4. Team composition (5×4 is recommended), and whether participants are business, technical, or mixed users.
+3. Apps: confirm the app quota (20+). Genie Code builds the app, and Streamlit is the suggested framework.
+4. Whether participants are business, technical, or mixed users.
 5. Data: prepared by the facilitator before the hackathon (fictional names, following the data contract in section 3.1).
 6. Prizes and judges (ideally a customer business sponsor on the panel).

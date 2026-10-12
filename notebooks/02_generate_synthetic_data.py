@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 03 · Synthetic data generator: Perfect Store Command Centre
+# MAGIC # 02 · Synthetic data generator: Perfect Store Command Centre
 # MAGIC
 # MAGIC Generates a **fully synthetic, fictional** retail-execution dataset straight into the source schema as Delta tables.
 # MAGIC No real retailers, suppliers, brands or people. Usually called from **Step 3** of `00_facilitator_runbook`, but it can also be run on its own.
@@ -29,7 +29,7 @@
 # MAGIC
 # MAGIC **Column names are deliberately imperfect**, like a real source system: abbreviated and inconsistent (`str_id`, `sku`, `qty`, `nsv`, `gp`,
 # MAGIC `prm_flg`, `wk_strt_dt`, `rgn`, `fmt_cd`, `osa_pct`, `nt_txt`), with **coded values** (`fmt_cd` HYP/SUP/CNV/WHS, `sts` O/C,
-# MAGIC `tier_cd` K/C/E, `cat_typ` FD/LQ/GM, `prm_typ` PR/MB/BN, `prm_flg` Y/N). **No descriptions are written.** Teams add them in
+# MAGIC `tier_cd` K/C/E, `cat_typ` FD/LQ/GM, `prm_typ` PR/MB/BN, `prm_flg` Y/N). **No descriptions are written.** Attendees add them in
 # MAGIC Sprint 4a and build metric views in Sprint 2 to get good results. The full column dictionary is the `RENAMES` map below.
 # MAGIC The data is **deterministic** for a given seed, and it ends with the last complete week before the run date.
 
