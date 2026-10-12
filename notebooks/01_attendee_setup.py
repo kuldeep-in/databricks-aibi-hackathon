@@ -17,16 +17,18 @@
 
 # MAGIC %md
 # MAGIC ## 1. Configuration
-# MAGIC Enter the **catalog** your facilitator gives you. Leave `my_schema` blank to use a schema named after you, or type your own name for it.
+# MAGIC Enter the **catalog** and **SQL warehouse ID** your facilitator gives you. Leave `my_schema` blank to use a schema named after you, or type your own name for it.
 
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-dbutils.widgets.text("my_schema", "", "2. My schema (blank = named after me)")
+dbutils.widgets.text("warehouse_id", "<warehouse_id>", "2. SQL warehouse ID")
+dbutils.widgets.text("my_schema", "", "3. My schema (blank = named after me)")
 
 # COMMAND ----------
 
 catalog = dbutils.widgets.get("catalog").strip()
+warehouse_id = dbutils.widgets.get("warehouse_id").strip()
 source_schema = "hack_14oct"   # read-only source data
 import re
 me = spark.sql("SELECT current_user()").first()[0]
@@ -38,6 +40,14 @@ def q(*parts):
 src = q(catalog, source_schema)
 dst = q(catalog, my_schema)
 print(f"Source    : {src}  (read-only)\nMy schema : {dst}\nOwner     : {me}")
+
+# Check that you can use the hackathon SQL warehouse (dashboards, Genie and your app run on it)
+from databricks.sdk import WorkspaceClient
+try:
+    hw = WorkspaceClient().warehouses.get(warehouse_id)
+    print(f"Warehouse : {hw.name} ({warehouse_id}) ✅")
+except Exception as e:
+    print(f"Warehouse : ⚠️ can't access '{warehouse_id}'. Check the ID, or ask your facilitator for CAN USE. ({str(e)[:120]})")
 
 # COMMAND ----------
 
@@ -197,4 +207,5 @@ display(spark.sql(f"""
 
 # MAGIC %md
 # MAGIC ✅ **Done.** Open **Catalog Explorer → your catalog → your schema**, look at the tables and their lineage, and continue with Sprint 1.
+# MAGIC Use the **hackathon SQL warehouse** (the `warehouse_id` you entered) for your dashboard, your Genie space and your app.
 # MAGIC Start with a quick dashboard as it is, then improve it with metric views (Sprint 2) and descriptions (Sprint 4a), and watch the results get better.

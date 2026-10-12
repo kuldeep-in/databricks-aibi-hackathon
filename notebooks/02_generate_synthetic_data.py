@@ -61,6 +61,7 @@ today = dt.date.today()
 END_WEEK = today - dt.timedelta(days=today.weekday() + 7)          # Monday of the last complete week
 START_WEEK = END_WEEK - dt.timedelta(weeks=N_WEEKS - 1)
 print(f"Target {catalog}.{schema} · weeks {START_WEEK} → {END_WEEK} · {N_STORES} stores · {N_SKUS} SKUs")
+spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{catalog}`.`{schema}` COMMENT 'Perfect Store hackathon: read-only source data. Attendees copy from here.'")
 
 def tbl(name):
     return f"`{catalog}`.`{schema}`.`{name}`"

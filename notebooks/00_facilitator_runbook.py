@@ -34,6 +34,7 @@
 # MAGIC | Widget | Meaning |
 # MAGIC |---|---|
 # MAGIC | `catalog` | The one catalog for the whole hackathon. **Required** |
+# MAGIC | `warehouse_id` | The SQL warehouse attendees use for dashboards, Genie and the app (SQL Warehouses → warehouse → *Overview* → ID). **Required** |
 # MAGIC
 # MAGIC **Fixed settings (variables in the next cell; edit there only if needed):**
 # MAGIC
@@ -44,10 +45,12 @@
 # COMMAND ----------
 
 dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
+dbutils.widgets.text("warehouse_id", "<warehouse_id>", "2. SQL warehouse ID")
 
 # COMMAND ----------
 
 catalog = dbutils.widgets.get("catalog").strip()
+warehouse_id = dbutils.widgets.get("warehouse_id").strip()
 
 # Fixed settings
 source_schema = "hack_14oct"          # read-only source data (make it read-only for participants)
@@ -57,7 +60,7 @@ def q(*parts):
 
 isc = f"{q(catalog)}.information_schema"
 SRC = q(catalog, source_schema)
-print(f"Catalog : {catalog}\nSource  : {SRC}")
+print(f"Catalog   : {catalog}\nSource    : {SRC}\nWarehouse : {warehouse_id}")
 
 # COMMAND ----------
 
@@ -83,6 +86,16 @@ w = WorkspaceClient()
 
 wh = [(x.name, x.id, str(x.state), x.cluster_size, bool(x.enable_serverless_compute)) for x in w.warehouses.list()]
 display(spark.createDataFrame(wh, "name string, id string, state string, size string, serverless boolean") if wh else spark.createDataFrame([], "name string"))
+
+# The hackathon warehouse (from the warehouse_id widget)
+try:
+    hw = w.warehouses.get(warehouse_id)
+    print(f"✅ Hackathon warehouse: {hw.name} ({warehouse_id}) · state {hw.state} · size {hw.cluster_size} · "
+          f"serverless {bool(hw.enable_serverless_compute)} · clusters {hw.min_num_clusters}–{hw.max_num_clusters}")
+    if (hw.max_num_clusters or 1) < 2:
+        print("ℹ️  For 20 attendees, consider autoscaling to at least 2–3 clusters.")
+except Exception as e:
+    print(f"❌ Warehouse '{warehouse_id}' not found or not accessible: {str(e)[:200]}")
 
 try:
     apps = list(w.apps.list())
@@ -233,7 +246,8 @@ display(spark.sql(f"SELECT table_name, constraint_name, constraint_type FROM {is
 # MAGIC GRANT USE SCHEMA, SELECT ON SCHEMA <catalog>.hack_14oct TO `<attendees>`;
 # MAGIC ```
 # MAGIC
-# MAGIC Also give them **CAN USE** on the SQL warehouse (SQL Warehouses → warehouse → Permissions).
+# MAGIC Also give them **CAN USE** on the hackathon SQL warehouse (the `warehouse_id` widget): SQL Warehouses → warehouse → Permissions.
+# MAGIC Share the **warehouse ID** with attendees, because `01_attendee_setup` asks for it.
 
 # COMMAND ----------
 

@@ -19,7 +19,7 @@ answer. Facilitators will demo the **how** at the start of each sprint, so watch
 | Catalog | `<hack_catalog>` |
 | Source data (read-only) | `<hack_catalog>.hack_14oct` |
 | Your schema | `<hack_catalog>.<your_name>`: created for you by the setup notebook, named after you (for example `jane_doe`) |
-| SQL warehouse | `<warehouse>` |
+| SQL warehouse ID | `<warehouse_id>` (enter it in `01_attendee_setup`; use this warehouse for your dashboard, Genie space and app) |
 | Setup notebook | `<workspace-path>/01_attendee_setup` |
 
 **Checklist:** ☐ I can log in ☐ I've opened the [scenario](scenario.md)
@@ -65,7 +65,7 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 
 ### Sprint 0: Your setup (15 min)
 
-1. Open `01_attendee_setup`, enter the `catalog`, leave `my_schema` blank (your schema is named after you), and click **Run all**.
+1. Open `01_attendee_setup`, enter the `catalog` and `warehouse_id`, leave `my_schema` blank (your schema is named after you), and click **Run all**.
    Step 1 creates **your own schema**. Step 2 **copies every table** from the read-only `hack_14oct` into it.
 2. Open **Catalog Explorer → `<hack_catalog>` → your schema** and check that the tables are there.
 3. Look at a few tables. Notice the **lineage** back to `hack_14oct`, and that the tables have **almost no descriptions**. You'll fix that later.
