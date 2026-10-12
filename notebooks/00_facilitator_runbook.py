@@ -22,7 +22,7 @@
 # MAGIC - `01_attendee_setup`: run by **every attendee** in Sprint 0. It creates the attendee's own schema and copies every table (with constraints) from `hack_14oct` into it.
 # MAGIC - `02_generate_synthetic_data`: the synthetic data generator, called from Step 3.
 # MAGIC
-# MAGIC **Docs in this folder:** `docs/hackathon-plan.md`, `docs/attendee-guide.md`, `docs/scenario.md`
+# MAGIC **Docs in this folder:** `docs/hackathon-plan.md`, `docs/attendee-guide.md`
 
 # COMMAND ----------
 
@@ -100,6 +100,7 @@ except Exception as e:
 # MAGIC - [ ] **Metric views** can be created (Catalog Explorer → schema → *Create* → *Metric view*)
 # MAGIC - [ ] **AI-generated descriptions** are available in Catalog Explorer (table → *AI generate*)
 # MAGIC - [ ] **Genie Code** opens in the app/notebook editor
+# MAGIC - [ ] **Custom Viz** (Public Preview) is available in dashboards (visualization → *Advanced → Custom Viz*), for the bonus custom visual
 # MAGIC - [ ] A **SQL warehouse** exists for attendees (serverless, autoscaling 2–3 clusters), and you have its **ID** to share with them
 # MAGIC - [ ] Partner-powered AI features are enabled in the workspace/account settings
 
@@ -247,14 +248,14 @@ display(spark.sql(f"SELECT table_name, constraint_name, constraint_type FROM {is
 # MAGIC
 # MAGIC 1. Open **`01_attendee_setup`** (in this folder), set `catalog` (leave `my_schema` blank to get a schema named after you), and click **Run all**.
 # MAGIC    Check that every row count matches ✅, the constraints are present, and description coverage is low (expected).
-# MAGIC 2. Follow `docs/attendee-guide.md` and `docs/scenario.md` (the one scenario everyone builds) in that schema. Time each step.
+# MAGIC 2. Follow `docs/attendee-guide.md` (what everyone builds, sprint by sprint) in that schema. Time each step.
 # MAGIC
 # MAGIC | Sprint | Test | Pass when |
 # MAGIC |---|---|---|
 # MAGIC | 0 · Attendee setup | Run `01_attendee_setup` as above | Row counts match, and the tables appear in Catalog Explorer with lineage to `hack_14oct` |
 # MAGIC | 1 · Dashboard | Create a dashboard on your tables, use the AI assistant for 3 visuals, add filters, publish | Published, and the AI assistant produces sensible charts |
 # MAGIC | 2 · Metric views | Create `mv_sales` in your schema from the attendee-guide template (Appendix A), and query it with `MEASURE()` | It returns rows, and the dashboard can use the metric view as a dataset |
-# MAGIC | 3 · Genie quick win | Create a Genie space on your tables, and ask the 10 scenario questions | Expect several wrong or unclear answers (that's the point) |
+# MAGIC | 3 · Genie quick win | Create a Genie space on your tables, and ask the 10 questions from the attendee guide | Expect several wrong or unclear answers (that's the point) |
 # MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The answers get better |
 # MAGIC | 4b · Tuning | Add instructions (fiscal year, sales = NSV), sample questions, and the metric view | Most questions are now answered well |
 # MAGIC | 5 · App | Create an app, then use the 2 Genie Code prompts (attendee guide, Appendix C) | Tab 1 table and Tab 2 visuals work. Note the time it took |

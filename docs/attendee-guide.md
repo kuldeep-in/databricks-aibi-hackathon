@@ -2,12 +2,12 @@
 
 **Databricks Hackathon · 4 hours · AI/BI Dashboards · Metric Views · Genie · Databricks Apps**
 
-> *You are the insights team at a fictional retail-execution agency. Your FMCG clients ask every Monday: how did we sell last week,
-> did we hit budget, and what is happening on the shelf? Build the command centre that answers these questions, from a dashboard to a
-> trusted Genie to a field-team app.*
+> *You are the insights analyst at a fictional retail-execution agency. Every Monday morning the agency's FMCG clients ask three
+> questions: **How did we sell?** **Are we on budget?** **What is happening on the shelf?** You have one morning to build the command
+> centre that answers them: a dashboard, a trusted Genie space and a small app.*
 
-This guide tells you **what** to do in each sprint. The **[scenario](scenario.md)** (the same for everyone) tells you **which business questions** to
-answer. Facilitators will demo the **how** at the start of each sprint, so watch the demo, then build.
+**Everyone builds the same thing**, on their own, in their own schema. This guide tells you **what** to build in each sprint.
+Facilitators will demo the **how** at the start of each sprint, so watch the demo, then build.
 
 ---
 
@@ -22,14 +22,18 @@ answer. Facilitators will demo the **how** at the start of each sprint, so watch
 | SQL warehouse ID | `<warehouse_id>` (enter it in `01_attendee_setup`; use this warehouse for your dashboard, Genie space and app) |
 | Setup notebook | `<workspace-path>/01_attendee_setup` |
 
-**Checklist:** ☐ I can log in ☐ I've opened the [scenario](scenario.md)
+**Checklist:** ☐ I can log in ☐ I have the catalog name and the SQL warehouse ID
 
 ---
 
-## 2. The scenario
+## 2. The business questions
 
-**Everyone builds the same thing**, on their own, in their own schema: the **[Monday Command Centre](scenario.md)**.
-It covers sales vs last year and budget, shelf execution (OSA), and promotion profitability.
+1. How did we sell **last week** and **year to date**, compared with last year and with **budget**?
+2. Which **regions and retailers** are driving or dragging performance?
+3. Where is **poor shelf execution** (on-shelf availability, OSA) **costing sales**?
+4. Which **promotions** grow sales **profitably**, and which lose money?
+
+**Data you'll use:** `fact_sales_weekly`, `fact_budget_monthly`, `fact_store_visits`, `fact_promotions`, `dim_store`, `dim_product`, `dim_date`
 
 ---
 
@@ -47,7 +51,7 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 
 | Time | Sprint | What you do | Done when |
 |---|---|---|---|
-| 0:00 – 0:15 | Kick-off | Hear the storyline and the scenario | Ready |
+| 0:00 – 0:15 | Kick-off | Hear the storyline and the business questions | Ready |
 | 0:15 – 0:30 | **0. Your setup** | Create your own schema and copy the data into it | ✅ Tables in your schema |
 | 0:30 – 1:00 | **1. Dashboard quick win** | Build a first dashboard straight on your tables | ✅ Dashboard v1 published |
 | 1:00 – 1:45 | **2. Metric views** | Define your KPIs once as metric views, and rebuild the dashboard on them | ✅ Dashboard v2 on metric views |
@@ -61,44 +65,74 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 
 ---
 
-## 5. What to do in each sprint (high level)
+## 5. What to do in each sprint
 
 ### Sprint 0: Your setup (15 min)
 
 1. Open `01_attendee_setup`, enter the `catalog` and `warehouse_id`, leave `my_schema` blank (your schema is named after you), and click **Run all**.
-   Step 1 creates **your own schema**. Step 2 **copies every table** from the read-only `hack_14oct` into it.
+   It creates **your own schema**, then **copies every table** from the read-only `hack_14oct` into it.
 2. Open **Catalog Explorer → `<hack_catalog>` → your schema** and check that the tables are there.
-3. Look at a few tables. Notice the **lineage** back to `hack_14oct`, and that the tables have **almost no descriptions**. You'll fix that later.
+3. Look at a few tables. Notice the **lineage** back to `hack_14oct`, the **cryptic column names**, and that there are **no descriptions**. You'll fix that later.
 
 ### Sprint 1: Dashboard quick win (30 min)
 
 1. Create an **AI/BI Dashboard** named `<initials> – Monday Command Centre`.
-2. Add your tables as datasets (for example the weekly sales fact table and its dimensions).
-3. Use the **AI assistant** in the dashboard to create 4–6 visuals for the scenario's questions, and add 2–3 filters (for example Week, Region, Retailer).
+2. Add your tables as datasets (the weekly sales fact table and its dimensions).
+3. Use the **AI assistant** in the dashboard to build one page with 4–6 visuals:
+   - KPI counters: Sales last week, Sales YTD, Budget attainment %, Avg OSA %
+   - Weekly sales trend (this year vs last year)
+   - Sales by region (bar or map)
+   - Retailer table: sales, growth, budget variance
+   - Filters: Week range, Region, Retailer, Category
 4. **Publish** it. That's dashboard **v1**.
 
 > Don't aim for perfection. Get something working quickly. Notice how much SQL or guessing each visual needs.
 
 ### Sprint 2: Metric views (45 min)
 
-1. Create your first **metric view** in your schema (starter in Appendix A), with dimensions such as Week, Region, Retailer, Category and Brand,
-   and measures such as Sales, Units, Margin and **Margin %**.
+1. Create your first **metric view**, `mv_sales`, in your schema (starter in Appendix A).
 2. Query it with `MEASURE()` in the SQL editor and check that the numbers look right.
-3. Add the business measures the scenario needs (see the [scenario](scenario.md)), for example YoY growth %, Budget variance or OSA %.
+3. Build all three metric views:
+
+   | Metric view | Measures to build |
+   |---|---|
+   | `mv_sales` | Sales, Units, Margin, **Margin %**, YoY growth %, Promo Sales |
+   | `mv_budget` | Budget, Actual, **Variance %** |
+   | `mv_execution` | Visits, **Avg OSA %**, Avg POG compliance %, % of stores below the 85% OSA target |
+
 4. Add descriptions, display names and synonyms to your measures.
 5. **Switch your dashboard datasets** to the metric views. That's dashboard **v2**. Compare it with v1.
+6. Add a second **"Why?" page** with a drill-down (region → retailer → store) and an "OSA vs sales growth by region" visual.
+
+#### ⭐ Bonus: build a custom visual
+
+If you finish early, add a **custom visual** to your dashboard: a **bullet chart of Sales vs Budget by region**, which the built-in
+chart types can't draw. AI/BI dashboards render custom visuals from a **Vega-Lite** spec (*Custom Viz*). See Appendix D.
 
 ### Sprint 3: Genie quick win (25 min)
 
 1. Create a **Genie space** named `<initials> – Monday Genie`, using your **tables** (not the metric views yet).
-2. Ask the **10 questions** from the [scenario](scenario.md) **exactly as written**.
+2. Ask these **10 questions exactly as written**:
+   1. What were total sales last week?
+   2. How did sales last week compare to the same week last year?
+   3. What are year-to-date sales vs budget?
+   4. Which region is furthest below budget?
+   5. What is the average OSA by region this month?
+   6. How many stores are below the OSA target?
+   7. Which regions have falling OSA and falling sales?
+   8. Which promotion mechanic has negative margin?
+   9. What is the margin % by category this fiscal year?
+   10. Which stores were not visited in the last 4 weeks?
 3. Note which answers look wrong or unclear. You'll fix them in Sprint 4.
 
 ### Sprint 4a: Describe your data (20 min, a key capability)
 
 1. In **Catalog Explorer**, open each of your tables and use **AI generate** for the table description, then for the column descriptions.
-2. **Review every suggestion.** The business expert corrects the meanings, units (ZAR, %), grain and abbreviations (Appendix B).
-3. Concentrate on the tables and columns behind your 10 test questions first.
+2. **Review every suggestion.** Correct the meanings, units (ZAR, %), grain, codes and abbreviations (Appendix B).
+3. Start with the columns behind the 10 questions:
+   `fact_sales_weekly` (`nsv`, `gsv`, `gp`, `qty`, `prm_flg`, `wk_strt_dt`), `fact_budget_monthly` (`bgt_nsv`, `mth_strt_dt`),
+   `fact_store_visits` (`osa_pct`, `pog_comp`, `vst_dt`), `fact_promotions` (`mech`, `prm_typ`, `disc`), `dim_store` (`rgn`, `rtl_grp`, `fmt_cd`),
+   `dim_date` (`fy_cd`, `fy_q`, `fy_wk`)
 4. You can also bulk-edit with SQL `COMMENT ON` / `ALTER COLUMN … COMMENT`, and add tags.
 5. **Re-ask the same 10 questions without changing anything else**, and compare the answers.
 
@@ -106,19 +140,20 @@ It covers sales vs last year and budget, shelf execution (OSA), and promotion pr
 
 Work through this list from the top. After each step, re-ask the questions that still look wrong:
 
-1. **General instructions:** business rules (what "sales" means, the fiscal year March–February, what "top" means, currency ZAR).
+1. **General instructions:** sales means net sales value (`nsv`), the **fiscal year runs March–February**, "last week" is the last complete
+   week, the **OSA target is 85%**, "furthest below budget" means the lowest variance %, and currency is ZAR.
 2. **Space-level refinements:** synonyms, hide columns you don't need.
 3. **Sample questions:** 5–8 starter questions a client would ask on a Monday.
 4. **SQL expressions:** reusable measures and filters.
-5. **Joins and example SQL** for the hard questions.
-6. **Add your metric views** to the space.
+5. **Joins and example SQL** for the hard questions (YoY growth, joining visits to sales by store and week).
+6. **Add your three metric views** to the space, so Genie uses the governed KPIs.
 7. **Trusted assets:** a UC SQL function for a parameterised question.
-
 
 ### Sprint 5: App (20 min)
 
-Build a two-tab Databricks App with **Genie Code** (Appendix C): **Tab 1** shows a data table from your metric view, and **Tab 2** shows visuals.
-Do Tab 1 first and deploy it, then add Tab 2.
+Build a two-tab Databricks App with **Genie Code** (Appendix C):
+- **Tab 1 "Data":** a filterable table from `mv_sales` (Region, Retailer, Category, Week). Do this first and deploy it.
+- **Tab 2 "Insights":** KPI tiles (Sales, Margin %, YoY growth, OSA %), a weekly sales trend and sales by region.
 
 ### Demo (5 volunteers, 3 minutes each)
 
@@ -126,7 +161,8 @@ Tell a **before → after** story:
 1. The Monday question (15 s).
 2. Dashboard v1 → v2 on metric views: what changed (45 s).
 3. Genie: a live question, before and after tuning (60 s).
-4. The insight you found and the action to take this week (30 s).
+4. The insight you found and the action to take this week (30 s). For example: *"Region Y is below budget. Its OSA dropped below 85%,
+   and its stores lost sales. Promotion X drives volume but loses money. This week: send the field team to Region Y, and stop promotion X."*
 5. The app (30 s).
 
 ---
@@ -223,3 +259,42 @@ Create an app named `<initials>-command-centre` (Compute → Apps → Create, wi
 
 ✅ Changing a filter updates both tabs. To refine, use small follow-up prompts ("add a CSV download", "highlight Margin % below 20% in red").
 Don't change the app's start command or port.
+
+---
+
+## Appendix D: ⭐ Bonus custom visual (Vega-Lite)
+
+**Goal:** a bullet chart that shows each region's **Sales** as a bar against its **Budget** (a lighter bar with a target tick).
+
+1. **Add a dataset** to your dashboard with one row per region and two numbers. For example, combine your metric views:
+   ```sql
+   SELECT s.Region AS region, s.sales, b.budget
+   FROM (SELECT Region, MEASURE(Sales) AS sales FROM <your_schema>.mv_sales GROUP BY ALL) s
+   JOIN (SELECT Region, MEASURE(Budget) AS budget FROM <your_schema>.mv_budget GROUP BY ALL) b USING (Region)
+   ```
+   (Use the dimension and measure names you gave your own metric views.)
+2. Add a visualization on that dataset, then choose **Advanced → Custom Viz**.
+3. Under **Fields**, add `region`, `sales` and `budget`, each with that exact **Name**.
+4. Paste this spec, then adjust it:
+
+```json
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "data": {"name": "databricks_query"},
+  "encoding": {"y": {"field": "region", "type": "nominal", "sort": "-x", "title": null}},
+  "layer": [
+    {"mark": {"type": "bar", "opacity": 0.3},
+     "encoding": {"x": {"field": "budget", "type": "quantitative", "title": "ZAR"}}},
+    {"mark": {"type": "bar", "size": 10},
+     "encoding": {"x": {"field": "sales", "type": "quantitative"}}},
+    {"mark": {"type": "tick", "thickness": 2, "size": 22},
+     "encoding": {"x": {"field": "budget", "type": "quantitative"}}}
+  ]
+}
+```
+
+**Make it better:** add a tooltip with sales, budget and variance %, colour regions that are below budget, or make the chart
+**cross-filter** the rest of the dashboard by adding a point-selection parameter named `databricks_mark_selection` on `region`.
+Ask the Assistant to help you edit the Vega-Lite.
+
+> Custom Viz is in **Public Preview**. If you don't see *Advanced → Custom Viz*, ask your facilitator.

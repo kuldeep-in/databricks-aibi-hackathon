@@ -52,7 +52,7 @@ already know the shape of the data, and the key insight (execution gaps costing 
 **Ground rules for the data:** fictional retailers, suppliers and brands only (no real client or retailer names), currency **ZAR**,
 a **South African** region/province store hierarchy, and a **March–February fiscal year**.
 
-There is **one scenario for everyone** (section 8, `docs/scenario.md`): no options and no roles. Every attendee builds the same thing with the same data.
+There is **one scenario for everyone** (section 8, in `docs/attendee-guide.md`): no options and no roles. Every attendee builds the same thing with the same data.
 
 ---
 
@@ -220,7 +220,7 @@ Attendees get a partly filled metric view starter with TODOs in the attendee gui
 ### Quick win (Sprint 3)
 
 1. Create a Genie space on the attendee's tables as they are: **undocumented** (`fact_sales_weekly`, the dims, and `fact_store_visits`).
-2. Ask the **10 questions** from `docs/scenario.md`, and note which answers look wrong or unclear.
+2. Ask the **10 questions** from the attendee guide (Sprint 3), and note which answers look wrong or unclear.
 
 ### Sprint 4a: describe your data in Unity Catalog (key capability)
 
@@ -338,11 +338,11 @@ review and deploy what it builds. The app has two tabs, built one stage at a tim
 
 ## 8. The scenario (the same for everyone)
 
-**Monday Command Centre** (`docs/scenario.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
+**Monday Command Centre** (all in `docs/attendee-guide.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
 
 | Part | What everyone builds |
 |---|---|
-| Dashboard | v1 on the tables, then v2 on metric views: an executive page plus a "Why?" drill-down page |
+| Dashboard | v1 on the tables, then v2 on metric views: an executive page plus a "Why?" drill-down page. **Bonus:** a custom visual (bullet chart of Sales vs Budget by region) with Custom Viz (Vega-Lite, Public Preview) |
 | Metric views | `mv_sales` (Sales, Units, Margin, Margin %, YoY, Promo Sales), `mv_budget` (Budget, Variance %), `mv_execution` (Avg OSA %, POG compliance %, % of stores below target) |
 | Descriptions | Every table and column in their schema, AI-generated and then reviewed |
 | Genie | 10 questions, re-asked after describing the data and after tuning |
@@ -357,7 +357,7 @@ that Genie only handles well after the data is described and the space is tuned.
 
 | # | Item | Owner | When |
 |---|---|---|---|
-| 1 | Confirm the region supports **Serverless SQL**, **Genie**, **Metric Views**, **Foundation Model APIs** and **Databricks Apps** | Databricks | T-2 weeks |
+| 1 | Confirm the region supports **Serverless SQL**, **Genie**, **Metric Views**, **Foundation Model APIs** and **Databricks Apps**, plus **Custom Viz** in AI/BI dashboards (Public Preview, for the bonus custom visual) | Databricks | T-2 weeks |
 | 2 | Turn on **partner-powered AI features** and the Databricks Assistant | Customer admin | T-2 weeks |
 | 3 | Create the catalog `<hack_catalog>` (with a managed storage location if the metastore has no default) | Customer admin | T-2 weeks |
 | 4 | Create the account group `<hackathon_participants>` (20 users) | Customer admin | T-1 week |
@@ -391,8 +391,7 @@ databricks-aibi-hackathon/
 ├── README.md
 ├── docs/
 │   ├── hackathon-plan.md          ← this file
-│   ├── attendee-guide.md          ← attendee instructions, sprint by sprint, cheat-sheets, Genie Code prompts
-│   └── scenario.md                ← the one scenario everyone builds
+│   └── attendee-guide.md          ← everything attendees need: business questions, sprints, Genie questions, cheat-sheets, app prompts, bonus custom visual
 └── notebooks/
     ├── 00_facilitator_runbook     ← facilitator: create hack_14oct, generate the data, constraints, grants, test
     ├── 01_attendee_setup          ← every attendee: create their own schema and copy every table from hack_14oct

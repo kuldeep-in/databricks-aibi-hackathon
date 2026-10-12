@@ -24,8 +24,7 @@ tables into their own schema, so they own the data **and its descriptions**.
 ```
 docs/
 ├── hackathon-plan.md          # facilitator plan: agenda, data strategy, metric views, Genie ladder, grants, risks
-├── attendee-guide.md          # high-level attendee instructions, sprint by sprint, plus cheat-sheets
-└── scenario.md                # the one scenario everyone builds (Monday Command Centre)
+└── attendee-guide.md          # everything attendees need: business questions, sprint-by-sprint steps, Genie questions, cheat-sheets, app prompts, bonus custom visual
 notebooks/
 ├── 00_facilitator_runbook.py  # step-by-step setup and test: schemas, synthetic data as Delta tables in hack_14oct, constraints, grants, testing
 ├── 01_attendee_setup.py       # run by every attendee: create their own schema, then deep clone every table from hack_14oct
@@ -37,7 +36,7 @@ notebooks/
 1. Import `notebooks/` into your Databricks workspace (keep `docs/` alongside them), or clone this repo as a Git folder.
 2. Open `00_facilitator_runbook`, set the `catalog` widget (the source schema defaults to `hack_14oct`), and run it **step by step**.
 3. Step 3 generates the synthetic dataset as Delta tables in `hack_14oct`. Make that schema read-only for participants.
-4. Test as an attendee (Step 8): run `01_attendee_setup` yourself (it creates your own schema), then follow the attendee guide for one scenario.
+4. Test as an attendee (Step 8): run `01_attendee_setup` yourself (it creates your own schema), then follow the attendee guide.
 5. Fill in the placeholders in `docs/attendee-guide.md` (workspace URL, catalog, warehouses, notebook path) and share it with attendees.
 
 > The data isn't included. Use **fictional** retailers, suppliers and brands only.
