@@ -52,7 +52,7 @@ already know the shape of the data, and the key insight (execution gaps costing 
 **Ground rules for the data:** fictional retailers, suppliers and brands only (no real client or retailer names), currency **ZAR**,
 a **South African** region/province store hierarchy, and a **March–February fiscal year**.
 
-There is **one scenario for everyone** (section 8, in `docs/attendee-guide.md`): no options and no roles. Every attendee builds the same thing with the same data.
+There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.md`): no options and no roles. Every attendee builds the same thing with the same data.
 
 ---
 
@@ -159,7 +159,7 @@ Attendees ask Genie the same questions before and after describing the data, and
 
 ### 3.2 Attendee setup notebook (each attendee runs it in Sprint 0)
 
-The facilitator provides one notebook, `01_attendee_setup`. Each attendee enters the catalog and clicks **Run all** (about 1–2 minutes). It does this:
+The facilitator provides one notebook, `attendees/01_attendee_setup`. Each attendee enters the catalog and the SQL warehouse ID, and clicks **Run all** (about 1–2 minutes). It does this:
 
 ```sql
 -- 1. Create the attendee's own schema (named after the user by default, for example jane_doe)
@@ -338,7 +338,7 @@ review and deploy what it builds. The app has two tabs, built one stage at a tim
 
 ## 8. The scenario (the same for everyone)
 
-**Monday Command Centre** (all in `docs/attendee-guide.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
+**Monday Command Centre** (all in `attendees/attendee-guide.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
 
 | Part | What everyone builds |
 |---|---|
@@ -389,12 +389,13 @@ an attendee can run `GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.jane_doe 
 ```
 databricks-aibi-hackathon/
 ├── README.md
+├── attendees/                     ← everything attendees need
+│   ├── attendee-guide.md          ← step-by-step guide: business questions, sprints, Genie questions, troubleshooting, cheat-sheets, app prompts, bonus custom visual
+│   └── 01_attendee_setup          ← every attendee runs this first: create their own schema and copy every table from hack_14oct
 ├── docs/
-│   ├── hackathon-plan.md          ← this file
-│   └── attendee-guide.md          ← everything attendees need: business questions, sprints, Genie questions, cheat-sheets, app prompts, bonus custom visual
-└── notebooks/
-    ├── 00_facilitator_runbook     ← facilitator: create hack_14oct, generate the data, constraints, grants, test
-    ├── 01_attendee_setup          ← every attendee: create their own schema and copy every table from hack_14oct
+│   └── hackathon-plan.md          ← facilitator plan (this file)
+└── hack_setup/                    ← facilitator only: everything to set up the hackathon
+    ├── 00_facilitator_runbook     ← create hack_14oct, generate the data, constraints, grants, test
     └── 02_generate_synthetic_data ← synthetic data generator (called by the runbook)
 ```
 

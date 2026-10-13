@@ -15,14 +15,14 @@
 # MAGIC | 3 | **Create the data:** generate the synthetic dataset as Delta tables in `hack_14oct`, then check it | **Yes** |
 # MAGIC | 4 | Add PK/FK constraints to the source tables | **Yes** |
 # MAGIC | 5 | Attendee permissions: the two grants to run yourself | Manual |
-# MAGIC | 6 | **Test as an attendee:** open `01_attendee_setup` yourself (it creates your own schema and copies every table from `hack_14oct` into it), then test every sprint | Manual |
+# MAGIC | 6 | **Test as an attendee:** open `attendees/01_attendee_setup` yourself (it creates your own schema and copies every table from `hack_14oct` into it), then test every sprint | Manual |
 # MAGIC | 7 | Clean up the schema you tested with | Manual |
 # MAGIC
-# MAGIC **Related notebooks in this folder:**
-# MAGIC - `01_attendee_setup`: run by **every attendee** in Sprint 0. It creates the attendee's own schema and copies every table (with constraints) from `hack_14oct` into it.
-# MAGIC - `02_generate_synthetic_data`: the synthetic data generator, called from Step 3.
+# MAGIC **Related notebooks:**
+# MAGIC - `../attendees/01_attendee_setup`: run by **every attendee** in Sprint 0. It creates the attendee's own schema and copies every table (with constraints) from `hack_14oct` into it.
+# MAGIC - `02_generate_synthetic_data` (this folder): the synthetic data generator, called from Step 3.
 # MAGIC
-# MAGIC **Docs in this folder:** `docs/hackathon-plan.md`, `docs/attendee-guide.md`
+# MAGIC **Docs:** `docs/hackathon-plan.md` (facilitator plan), `attendees/attendee-guide.md` (attendee guide)
 
 # COMMAND ----------
 
@@ -246,9 +246,9 @@ display(spark.sql(f"SELECT table_name, constraint_name, constraint_type FROM {is
 # MAGIC
 # MAGIC Test **exactly the way an attendee will**: open the attendee notebook yourself, and don't run it from here.
 # MAGIC
-# MAGIC 1. Open **`01_attendee_setup`** (in this folder), set `catalog` (leave `my_schema` blank to get a schema named after you), and click **Run all**.
+# MAGIC 1. Open **`attendees/01_attendee_setup`**, set `catalog` and `warehouse_id` (leave `my_schema` blank to get a schema named after you), and click **Run all**.
 # MAGIC    Check that every row count matches ✅, the constraints are present, and description coverage is low (expected).
-# MAGIC 2. Follow `docs/attendee-guide.md` (what everyone builds, sprint by sprint) in that schema. Time each step.
+# MAGIC 2. Follow `attendees/attendee-guide.md` (what everyone builds, sprint by sprint) in that schema. Time each step.
 # MAGIC
 # MAGIC | Sprint | Test | Pass when |
 # MAGIC |---|---|---|
