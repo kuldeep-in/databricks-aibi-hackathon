@@ -192,7 +192,11 @@ def run(sql, label):
     try:
         spark.sql(sql); print(f"✅ {label}")
     except Exception as e:
-        print(f"ℹ️  {label}: {str(e).splitlines()[0][:160]}")
+        msg = str(e).splitlines()[0]
+        if "ALREADY_EXIST" in msg.upper():
+            print(f"✅ {label}: already present")
+        else:
+            print(f"ℹ️  {label}: {msg[:300]}")
 
 for t, cols in PRIMARY_KEYS.items():
     for c in cols:
@@ -275,12 +279,21 @@ display(spark.createDataFrame(plan, "email string, schema string, status string"
 src_tables = [r.table_name for r in spark.sql(f"""SELECT table_name FROM {isc}.tables
     WHERE table_schema = '{source_schema}' AND table_type IN ('MANAGED', 'EXTERNAL') ORDER BY 1""").collect()]
 
-def quiet(sql):
-    try:
-        spark.sql(sql)
-    except Exception as e:
-        if "already exists" not in str(e).lower():
-            raise
+def fix_constraints(schema):
+    """DEEP CLONE copies the keys. Keep the copied primary keys, and replace every foreign key with one that points at the
+    attendee's own tables (a copied foreign key could still point at the source schema)."""
+    cons = spark.sql(f"""SELECT table_name, constraint_name, constraint_type FROM {isc}.table_constraints
+                         WHERE constraint_schema = '{schema}'""").collect()
+    for r in cons:
+        if r.constraint_type == "FOREIGN KEY":
+            spark.sql(f"ALTER TABLE {q(catalog, schema, r.table_name)} DROP CONSTRAINT IF EXISTS `{r.constraint_name}`")
+    has_pk = {r.table_name for r in cons if r.constraint_type == "PRIMARY KEY"}
+    for t, cols in PRIMARY_KEYS.items():
+        if t not in has_pk:
+            spark.sql(f"ALTER TABLE {q(catalog, schema, t)} ADD CONSTRAINT `pk_{t}` PRIMARY KEY ({', '.join(f'`{c}`' for c in cols)})")
+    for child, ccols, parent, pcols in FOREIGN_KEYS:
+        spark.sql(f"""ALTER TABLE {q(catalog, schema, child)} ADD CONSTRAINT `fk_{child}_{parent}`
+                      FOREIGN KEY ({', '.join(f'`{c}`' for c in ccols)}) REFERENCES {q(catalog, schema, parent)} ({', '.join(f'`{c}`' for c in pcols)})""")
 
 results = []
 for email, name, status in plan:
@@ -292,11 +305,7 @@ for email, name, status in plan:
         spark.sql(f"CREATE SCHEMA IF NOT EXISTS {q(catalog, name)} COMMENT 'Perfect Store hackathon: working schema of {email}, copied from {source_schema}'")
         for t in src_tables:
             spark.sql(f"CREATE OR REPLACE TABLE {q(catalog, name, t)} DEEP CLONE {q(catalog, source_schema, t)}")
-        for t, cols in PRIMARY_KEYS.items():
-            quiet(f"ALTER TABLE {q(catalog, name, t)} ADD CONSTRAINT `pk_{t}` PRIMARY KEY ({', '.join(f'`{c}`' for c in cols)})")
-        for child, ccols, parent, pcols in FOREIGN_KEYS:
-            quiet(f"""ALTER TABLE {q(catalog, name, child)} ADD CONSTRAINT `fk_{child}_{parent}`
-                      FOREIGN KEY ({', '.join(f'`{c}`' for c in ccols)}) REFERENCES {q(catalog, name, parent)} ({', '.join(f'`{c}`' for c in pcols)})""")
+        fix_constraints(name)
         for t in src_tables:
             spark.sql(f"ALTER TABLE {q(catalog, name, t)} OWNER TO `{email}`")
         spark.sql(f"ALTER SCHEMA {q(catalog, name)} OWNER TO `{email}`")
