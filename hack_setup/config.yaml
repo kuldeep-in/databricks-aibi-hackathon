@@ -1,0 +1,13 @@
+# Hackathon configuration, read by 00_facilitator_runbook and 01_generate_synthetic_data.
+# ⚠️ This repo is public: don't commit real emails or IDs. Edit this file in your workspace copy only.
+
+catalog: <your_catalog>            # the one catalog for the whole hackathon
+warehouse_id: <warehouse_id>       # SQL warehouse attendees use for dashboards, Genie and the app
+source_schema: hack_14oct          # read-only source data that attendees copy from
+
+# One email per attendee (add yourself too, to get a test schema).
+# Each attendee gets their own schema named after their email (jane.doe@example.com -> jane_doe), owns it, and gets
+# USE CATALOG, read access to the source schema, and CAN USE on the warehouse.
+attendees:
+  - jane.doe@example.com
+  - john.smith@example.com

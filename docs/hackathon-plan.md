@@ -75,7 +75,7 @@ There is **one scenario for everyone** (section 8, in `attendees/01_instructions
 
 **How it works**
 
-1. The facilitator fills in **one config file** (`hack_setup/config.yaml`: catalog, warehouse ID, attendee names and emails) and clicks **Run all** on `hack_setup/00_facilitator_runbook`.
+1. The facilitator fills in **one config file** (`hack_setup/config.yaml`: catalog, warehouse ID, attendee emails) and clicks **Run all** on `hack_setup/00_facilitator_runbook`.
    It builds `hack_14oct` (**read-only** for attendees), grants access, and **creates one schema per attendee**, named after them, with a copy
    of every table, **owned by the attendee** (section 3.2).
 2. In Sprint 0, each attendee opens their schema in Catalog Explorer and reads the hints in the attendee instructions.
@@ -104,7 +104,7 @@ There is **one scenario for everyone** (section 8, in `attendees/01_instructions
 
 - **20 attendees, each on their own**, each in their own schema. There are no attendees.
 - **Everyone does the same scenario** (section 8). No options, no special roles.
-- **Schema naming:** the setup notebook names each schema after the attendee's name in `config.yaml` (`Jane Doe` → `jane_doe`).
+- **Schema naming:** the setup notebook names each schema after the attendee's email in `config.yaml` (`jane.doe@company.com` → `jane_doe`).
 - **Ownership:** whoever creates the schema owns it, so no ownership transfer is needed.
 - **Asset naming:** start with the attendee's initials: dashboard `JD – Trade Performance`, Genie space `JD – Trade Genie`, app `jd-command-centre`. Metric views go in the attendee's schema (`jane_doe.mv_sales`).
 
@@ -164,7 +164,7 @@ Attendees ask Genie the same questions before and after describing the data, and
 Runbook **Step 6** reads the attendee list from `hack_setup/config.yaml` and, for each attendee:
 
 ```sql
--- 1. Create the attendee's schema, named after their NAME (Jane Doe -> jane_doe). Existing schemas are left alone.
+-- 1. Create the attendee's schema, named after their email (jane.doe@… -> jane_doe). Existing schemas are left alone.
 CREATE SCHEMA <catalog>.jane_doe COMMENT 'Perfect Store hackathon: working schema of jane.doe@…, copied from hack_14oct';
 
 -- 2. Copy every source table (DEEP CLONE = an independent copy), and add the PK/FK constraints
@@ -393,13 +393,12 @@ Attendees own their schema, so they need no other grants on it. To show their wo
 ```
 databricks-aibi-hackathon/
 ├── README.md
-├── .gitignore                     ← keeps hack_setup/config.yaml (real emails and IDs) out of the repo
 ├── attendees/                     ← instructions only (share with attendees)
 │   └── 01_instructions.md         ← the hackathon, sprint by sprint (a future 02_… file can hold advanced scenarios)
 ├── docs/
 │   └── hackathon-plan.md          ← facilitator plan (this file)
 └── hack_setup/                    ← facilitator only: everything to set up the hackathon
-    ├── config.example.yaml        ← copy to config.yaml: catalog, warehouse ID, attendee names and emails
+    ├── config.yaml                ← settings: catalog, warehouse ID, attendee emails (don't commit real values)
     ├── 00_facilitator_runbook     ← Run all: hack_14oct + synthetic data + constraints + grants + one schema per attendee
     └── 01_generate_synthetic_data ← synthetic data generator (called by the runbook)
 ```

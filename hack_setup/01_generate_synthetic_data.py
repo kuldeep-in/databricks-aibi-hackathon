@@ -40,7 +40,7 @@ from pyspark.sql import functions as F
 
 import os, yaml
 
-# Settings come from config.yaml in this folder (copy config.example.yaml to config.yaml first)
+# Settings come from config.yaml in this folder
 nb_dir = os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
 with open(os.path.join(nb_dir if nb_dir.startswith("/Workspace") else "/Workspace" + nb_dir, "config.yaml")) as fh:
     cfg = yaml.safe_load(fh)

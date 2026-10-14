@@ -27,7 +27,7 @@ attendees/                     # instructions only (share this folder with atten
 docs/
 └── hackathon-plan.md          # facilitator plan: agenda, data strategy, metric views, Genie ladder, grants, risks
 hack_setup/                    # facilitator only: everything to set up the hackathon
-├── config.example.yaml        # copy to config.yaml (git-ignored): catalog, warehouse ID, attendee names and emails
+├── config.yaml                # settings: catalog, warehouse ID, attendee emails
 ├── 00_facilitator_runbook.py  # Run all: read-only hack_14oct with synthetic data, constraints, grants, one schema per attendee
 └── 01_generate_synthetic_data.py  # synthetic, fictional dataset generator (called by the runbook)
 ```
@@ -35,8 +35,8 @@ hack_setup/                    # facilitator only: everything to set up the hack
 ## Getting started (facilitator)
 
 1. Clone this repo into your Databricks workspace as a Git folder (or import the `attendees/`, `docs/` and `hack_setup/` folders).
-2. In `hack_setup/`, copy `config.example.yaml` to `config.yaml` and fill in the catalog, warehouse ID and attendee names and emails.
-   `config.yaml` is git-ignored, so real emails and IDs are never committed.
+2. In your workspace copy, fill in `hack_setup/config.yaml`: the catalog, the warehouse ID and the attendee emails.
+   ⚠️ This repo is public, so don't commit real emails or IDs.
 3. Open `hack_setup/00_facilitator_runbook` and click **Run all**. One execution reads `config.yaml`, builds the read-only `hack_14oct`
    with the synthetic data, grants access, and creates every attendee's schema (owned by them).
 4. Test as an attendee: add yourself to `config.yaml` before the run, then follow `attendees/01_instructions.md` in your schema.

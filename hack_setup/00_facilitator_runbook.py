@@ -24,7 +24,7 @@
 # MAGIC
 # MAGIC After the run: **test as an attendee** and **clean up** (manual, see the end of this notebook).
 # MAGIC
-# MAGIC **Files in this folder:** `config.example.yaml` (copy to `config.yaml`), `01_generate_synthetic_data` (called from Step 3).
+# MAGIC **Files in this folder:** `config.yaml` (settings), `01_generate_synthetic_data` (called from Step 3).
 # MAGIC
 # MAGIC **Docs:** `docs/hackathon-plan.md` (facilitator plan), `attendees/01_instructions.md` (attendee instructions)
 
@@ -33,11 +33,11 @@
 # MAGIC %md
 # MAGIC ## Step 0 · Load the config file
 # MAGIC
-# MAGIC 1. In this `hack_setup/` folder, copy **`config.example.yaml`** to **`config.yaml`** (right-click → *Clone*, then rename).
-# MAGIC 2. Edit `config.yaml`: set `catalog`, `warehouse_id` and the `attendees` list (a **name** and an **email** for each). Add **yourself** too, so you get a test schema.
+# MAGIC 1. Open **`config.yaml`** in this `hack_setup/` folder.
+# MAGIC 2. Set `catalog`, `warehouse_id` and the `attendees` list (**one email per attendee**). Add **yourself** too, so you get a test schema.
 # MAGIC 3. Click **Run all**.
 # MAGIC
-# MAGIC `config.yaml` is in `.gitignore`, so the real emails and IDs are never committed to the repo.
+# MAGIC ⚠️ The repo is public: edit `config.yaml` in your workspace copy only, and **don't commit real emails or IDs**.
 # MAGIC **Done when:** the cell prints your settings and the number of attendees.
 
 # COMMAND ----------
@@ -52,7 +52,7 @@ except ImportError:
 nb_dir = os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
 CONFIG_PATH = os.path.join(nb_dir if nb_dir.startswith("/Workspace") else "/Workspace" + nb_dir, "config.yaml")
 if not os.path.exists(CONFIG_PATH):
-    raise FileNotFoundError(f"{CONFIG_PATH} not found. Copy config.example.yaml to config.yaml in this folder and fill it in.")
+    raise FileNotFoundError(f"{CONFIG_PATH} not found. It should be in the same folder as this notebook.")
 
 with open(CONFIG_PATH) as fh:
     cfg = yaml.safe_load(fh)
@@ -60,15 +60,11 @@ with open(CONFIG_PATH) as fh:
 catalog = cfg["catalog"].strip()
 warehouse_id = str(cfg["warehouse_id"]).strip()
 source_schema = cfg.get("source_schema", "hack_14oct").strip()
-def schema_for(name):
-    """Schema name from the attendee's name: 'Jane Doe' -> jane_doe ."""
-    return re.sub(r"[^0-9a-z]+", "_", name.lower()).strip("_")
+def schema_for(email):
+    """Schema name from the attendee's email: jane.doe@company.com -> jane_doe."""
+    return re.sub(r"[^0-9a-z]+", "_", email.split("@")[0].lower()).strip("_")
 
-attendees = []   # list of (email, name)
-for a in cfg.get("attendees") or []:
-    email = str(a["email"] if isinstance(a, dict) else a).strip().lower()
-    name = str(a.get("name") or email.split("@")[0]) if isinstance(a, dict) else email.split("@")[0]
-    attendees.append((email, name.strip()))
+attendees = sorted({str(e).strip().lower() for e in (cfg.get("attendees") or []) if "@" in str(e)})
 
 def q(*parts):
     return ".".join(f"`{p}`" for p in parts)
@@ -228,7 +224,7 @@ display(spark.sql(f"SELECT table_name, constraint_name, constraint_type FROM {is
 from databricks.sdk.service.sql import WarehouseAccessControlRequest, WarehousePermissionLevel
 
 access = []
-for email, _ in attendees:
+for email in attendees:
     try:
         spark.sql(f"GRANT USE CATALOG ON CATALOG {q(catalog)} TO `{email}`")
         spark.sql(f"GRANT USE SCHEMA, SELECT ON SCHEMA {SRC} TO `{email}`")
@@ -252,7 +248,7 @@ display(spark.createDataFrame(access, "email string, catalog_and_source_grants s
 # MAGIC ## Step 6 · Create attendee schemas ⚠️ changes things
 # MAGIC
 # MAGIC For **every attendee in `config.yaml`**, this:
-# MAGIC 1. creates their schema, named after their **name** (`Jane Doe` → `jane_doe`),
+# MAGIC 1. creates their schema, named after their **email** (`jane.doe@company.com` → `jane_doe`),
 # MAGIC 2. deep clones every table from `hack_14oct` into it, and adds the PK/FK constraints from Step 4,
 # MAGIC 3. makes the attendee the **owner** of the schema and of every table in it (so they can describe and change everything).
 # MAGIC
@@ -264,14 +260,14 @@ display(spark.createDataFrame(access, "email string, catalog_and_source_grants s
 # 6a · preview (changes nothing)
 existing = {r[0] for r in spark.sql(f"SHOW SCHEMAS IN {q(catalog)}").collect()}
 plan, seen = [], {}
-for email, person in attendees:
-    name = schema_for(person)
+for email in attendees:
+    name = schema_for(email)
     seen[name] = seen.get(name, 0) + 1
     if seen[name] > 1:
         name = f"{name}_{seen[name]}"
     plan.append((email, name, f"exists: {spark.sql(f'SHOW TABLES IN {q(catalog, name)}').count()} tables" if name in existing else "new"))
 display(spark.createDataFrame(plan, "email string, schema string, status string"))
-# Two attendees with the same name get a suffix (jane_doe, jane_doe_2): tell the second one which schema is theirs.
+# Two emails with the same name part (jane.doe@a.com, jane.doe@b.com) get jane_doe and jane_doe_2: tell the second one which schema is theirs.
 
 # COMMAND ----------
 
