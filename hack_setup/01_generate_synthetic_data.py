@@ -1,6 +1,6 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 02 · Synthetic data generator: Perfect Store Command Centre
+# MAGIC # 01 · Synthetic data generator: Perfect Store Command Centre
 # MAGIC
 # MAGIC Generates a **fully synthetic, fictional** retail-execution dataset straight into the source schema as Delta tables.
 # MAGIC No real retailers, suppliers, brands or people. Usually called from **Step 3** of `00_facilitator_runbook`, but it can also be run on its own. It reads `config.yaml` in this folder.

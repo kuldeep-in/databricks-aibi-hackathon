@@ -1,14 +1,15 @@
 # Databricks notebook source
 # MAGIC %md
-# MAGIC # 00 · Facilitator runbook: Perfect Store Command Centre hackathon
+# MAGIC # 00 · Hackathon setup: Perfect Store Command Centre
 # MAGIC
 # MAGIC **AI/BI Dashboards · Metric Views · Genie · Databricks Apps**
 # MAGIC
-# MAGIC This notebook walks you **step by step** through preparing and testing the hackathon environment. Run it **one section at a time**,
-# MAGIC top to bottom. Don't use *Run all*. Each step says what it does, whether it changes anything, and what "done" looks like.
+# MAGIC **One execution sets up everything:** the read-only source schema `hack_14oct` with the synthetic data, and one schema per
+# MAGIC attendee with their own copy of the data. Fill in the config file, then click **Run all** (about 10–20 minutes).
 # MAGIC
 # MAGIC Everything is driven by **one config file**, `hack_setup/config.yaml`: the catalog, the SQL warehouse ID, the source schema and the
-# MAGIC attendee email list. There are no widgets.
+# MAGIC attendee list (name and email). There are no widgets. It's safe to run again, for example after adding attendees:
+# MAGIC existing attendee schemas are never touched.
 # MAGIC
 # MAGIC | Step | What | Changes anything? |
 # MAGIC |---|---|---|
@@ -19,14 +20,13 @@
 # MAGIC | 4 | Add PK/FK constraints to the source tables | **Yes** |
 # MAGIC | 5 | Attendee access: `USE CATALOG`, read-only access to `hack_14oct`, and `CAN USE` on the warehouse, for every attendee in the config | **Yes** |
 # MAGIC | 6 | **Create attendee schemas:** one per attendee, with a copy of every table, owned by the attendee | **Yes** |
-# MAGIC | 7 | **Test as an attendee:** follow the attendee guide in your own schema | Manual |
-# MAGIC | 8 | Clean up after testing | Manual |
+# MAGIC | 7 | Summary: source tables and attendee schemas | No |
 # MAGIC
-# MAGIC **Related notebooks:**
-# MAGIC - `../attendees/01_attendee_setup`: attendees run it in Sprint 0 to check their schema and read the hints. It can also create or **reset** an attendee's schema.
-# MAGIC - `02_generate_synthetic_data` (this folder): the synthetic data generator, called from Step 3.
+# MAGIC After the run: **test as an attendee** and **clean up** (manual, see the end of this notebook).
 # MAGIC
-# MAGIC **Docs:** `docs/hackathon-plan.md` (facilitator plan), `attendees/attendee-guide.md` (attendee guide)
+# MAGIC **Files in this folder:** `config.example.yaml` (copy to `config.yaml`), `01_generate_synthetic_data` (called from Step 3).
+# MAGIC
+# MAGIC **Docs:** `docs/hackathon-plan.md` (facilitator plan), `attendees/01_instructions.md` (attendee instructions)
 
 # COMMAND ----------
 
@@ -35,7 +35,7 @@
 # MAGIC
 # MAGIC 1. In this `hack_setup/` folder, copy **`config.example.yaml`** to **`config.yaml`** (right-click → *Clone*, then rename).
 # MAGIC 2. Edit `config.yaml`: set `catalog`, `warehouse_id` and the `attendees` list (a **name** and an **email** for each). Add **yourself** too, so you get a test schema.
-# MAGIC 3. Run the cell below.
+# MAGIC 3. Click **Run all**.
 # MAGIC
 # MAGIC `config.yaml` is in `.gitignore`, so the real emails and IDs are never committed to the repo.
 # MAGIC **Done when:** the cell prints your settings and the number of attendees.
@@ -61,7 +61,7 @@ catalog = cfg["catalog"].strip()
 warehouse_id = str(cfg["warehouse_id"]).strip()
 source_schema = cfg.get("source_schema", "hack_14oct").strip()
 def schema_for(name):
-    """Schema name from the attendee's name: 'Jane Doe' -> jane_doe (the same rule as attendees/01_attendee_setup)."""
+    """Schema name from the attendee's name: 'Jane Doe' -> jane_doe ."""
     return re.sub(r"[^0-9a-z]+", "_", name.lower()).strip("_")
 
 attendees = []   # list of (email, name)
@@ -150,68 +150,29 @@ display(spark.sql(f"SHOW SCHEMAS IN {q(catalog)}"))
 # MAGIC %md
 # MAGIC ## Step 3 · Create the data as Delta tables in `hack_14oct` ⚠️ changes things
 # MAGIC
-# MAGIC **3a** runs `02_generate_synthetic_data`, which writes a fully synthetic, fictional dataset **straight into Delta tables** in the source
+# MAGIC **3a** runs `01_generate_synthetic_data`, which writes a fully synthetic, fictional dataset **straight into Delta tables** in the source
 # MAGIC schema (10 tables, about 350K weekly sales rows over 156 weeks, insights planted, **no descriptions and no metric views**). It takes a few minutes on serverless.
-# MAGIC Re-running it overwrites the tables with the same data (fixed seed). If you re-run it, re-run Step 4 too. **3b** checks the result.
+# MAGIC Re-running it overwrites the source tables with the same data (fixed seed). Step 4 then re-adds the constraints.
 
 # COMMAND ----------
 
 # 3a · generate the synthetic dataset as Delta tables in the source schema
-result = dbutils.notebook.run("./02_generate_synthetic_data", 3600)   # reads config.yaml itself
+result = dbutils.notebook.run("./01_generate_synthetic_data", 3600)   # reads config.yaml itself
 print(result)
 display(spark.sql(f"SHOW TABLES IN {SRC}"))
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC **3b · Check the tables (read-only).** Confirms every table and the columns the attendee docs refer to exist.
-# MAGIC **Done when:** every table is ✅.
-
-# COMMAND ----------
-
-# Columns the attendee docs, metric view starter and app prompts refer to
-DATA_CONTRACT = {
-    "dim_date":            ["dt", "wk_strt_dt", "fy_cd", "fy_wk"],
-    "dim_store":           ["str_id", "rgn", "rtl_grp", "fmt_cd", "prov"],
-    "dim_product":         ["sku", "cat", "brnd", "supp_id", "rsp"],
-    "dim_supplier":        ["supp_id", "supp_nm", "cat_typ"],
-    "dim_merchandiser":    ["rep_id", "rep_nm"],
-    "fact_sales_weekly":   ["wk_strt_dt", "str_id", "sku", "qty", "gsv", "nsv", "cogs", "gp", "prm_flg", "prm_id"],
-    "fact_budget_monthly": ["mth_strt_dt", "rgn", "rtl_grp", "cat", "bgt_nsv"],
-    "fact_promotions":     ["prm_id", "mech", "prm_typ", "disc", "sku", "rtl_grp", "strt_dt", "end_dt"],
-    "fact_store_visits":   ["vst_id", "vst_dt", "str_id", "rep_id", "osa_pct", "pog_comp", "sos"],
-    "visit_notes":         ["nt_id", "vst_id", "nt_txt"],
-}
-
-loaded = {}
-for r in spark.sql(f"SELECT table_name, column_name FROM {isc}.columns WHERE table_schema = '{source_schema}'").collect():
-    loaded.setdefault(r.table_name, set()).add(r.column_name)
-
-report = []
-for t, cols in DATA_CONTRACT.items():
-    if t not in loaded:
-        report.append((t, "❌ missing table", "", None))
-        continue
-    miss = [c for c in cols if c not in loaded[t]]
-    n = spark.table(q(catalog, source_schema, t)).count()
-    report.append((t, "✅" if not miss else "⚠️ columns missing", ", ".join(miss), n))
-extra = sorted(set(loaded) - set(DATA_CONTRACT))
-display(spark.createDataFrame(report, "table string, status string, missing_columns string, rows long"))
-if extra:
-    print(f"ℹ️  Extra tables in the source (they'll also be copied by attendees): {extra}")
-
-# COMMAND ----------
-
-# MAGIC %md
 # MAGIC ## Step 4 · PK/FK constraints on the source tables ⚠️ changes things
 # MAGIC
-# MAGIC Genie uses informational PK/FK constraints to join tables correctly, and `01_attendee_setup` copies them to every attendee schema.
+# MAGIC Genie uses informational PK/FK constraints to join tables correctly, and Step 6 copies them to every attendee schema.
 # MAGIC PK columns must be `NOT NULL` (the cell sets this).
 # MAGIC **Done when:** the constraint listing at the end shows your PKs and FKs.
 
 # COMMAND ----------
 
-PRIMARY_KEYS = {          # table -> [pk columns]   (matches 02_generate_synthetic_data)
+PRIMARY_KEYS = {          # table -> [pk columns]   (matches 01_generate_synthetic_data)
     "dim_date":          ["dt"],
     "dim_store":         ["str_id"],
     "dim_product":       ["sku"],
@@ -291,12 +252,12 @@ display(spark.createDataFrame(access, "email string, catalog_and_source_grants s
 # MAGIC ## Step 6 · Create attendee schemas ⚠️ changes things
 # MAGIC
 # MAGIC For **every attendee in `config.yaml`**, this:
-# MAGIC 1. creates their schema, named after their **name** (`Jane Doe` → `jane_doe`, the same rule `01_attendee_setup` uses),
+# MAGIC 1. creates their schema, named after their **name** (`Jane Doe` → `jane_doe`),
 # MAGIC 2. deep clones every table from `hack_14oct` into it, and adds the PK/FK constraints from Step 4,
 # MAGIC 3. makes the attendee the **owner** of the schema and of every table in it (so they can describe and change everything).
 # MAGIC
 # MAGIC If an attendee's schema **already exists**, it isn't created or copied: the report only shows how many tables it has.
-# MAGIC The first cell only previews the plan. The second cell does the work (about 20–40 seconds per new attendee).
+# MAGIC The first cell shows the plan. The second cell does the work (about 20–40 seconds per new attendee).
 
 # COMMAND ----------
 
@@ -353,35 +314,49 @@ display(spark.createDataFrame(results, "email string, schema string, tables long
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 7 · Test as an attendee (manual, about 60–90 min)
+# MAGIC ## Step 7 · Summary
 # MAGIC
-# MAGIC You're in `config.yaml`, so Step 6 created a schema for you. Test **exactly the way an attendee will**:
-# MAGIC
-# MAGIC 1. Open **`attendees/01_attendee_setup`** and click **Run all**. The catalog and warehouse ID are filled in from `config.yaml`.
-# MAGIC    Check that the row counts match ✅, the constraints are present, and description coverage is 0% (expected).
-# MAGIC 2. Follow `attendees/attendee-guide.md` (what everyone builds, sprint by sprint) in your schema. Time each step.
-# MAGIC
-# MAGIC | Sprint | Test | Pass when |
-# MAGIC |---|---|---|
-# MAGIC | 0 · Setup | Open your schema in Catalog Explorer, and run `01_attendee_setup` | 10 tables, lineage to `hack_14oct`, you're the owner |
-# MAGIC | 1 · Dashboard | Create a dashboard on your tables, use the AI assistant for 3 visuals, add filters, publish | Published, and the AI assistant produces sensible charts |
-# MAGIC | 2 · Metric views | Create `mv_sales` in your schema from the attendee-guide starter (Appendix A), and query it with `MEASURE()` | It returns rows, and the dashboard can use the metric view as a dataset |
-# MAGIC | 2 · Bonus | Build the Custom Viz bullet chart (attendee guide, Appendix D) | The chart renders |
-# MAGIC | 3 · Genie quick win | Create a Genie space on your tables, and ask the 10 questions from the attendee guide | Expect several wrong or unclear answers (that's the point) |
-# MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The answers get better |
-# MAGIC | 4b · Tuning | Add instructions (fiscal year, sales = NSV), sample questions, and the metric view | Most questions are now answered well |
-# MAGIC | 5 · App | Create an app, then use the 2 Genie Code prompts (attendee guide, Appendix C) | Tab 1 table and Tab 2 visuals work. Note the time it took |
+# MAGIC **Done when:** every source table has rows, and every attendee shows ✅ or `exists`.
+
+# COMMAND ----------
+
+display(spark.createDataFrame([(t, spark.table(q(catalog, source_schema, t)).count()) for t in src_tables],
+                              "source_table string, rows long"))
+display(spark.createDataFrame(results, "email string, schema string, tables long, status string"))
+print(f"✅ Setup finished: {len(src_tables)} source tables in {SRC}, "
+      f"{sum(r[3].startswith('✅') for r in results)} schema(s) created, {sum(r[3] == 'exists' for r in results)} already existed, "
+      f"{sum(r[3].startswith('❌') for r in results)} failed.")
 
 # COMMAND ----------
 
 # MAGIC %md
-# MAGIC ## Step 8 · Clean up after testing (manual)
+# MAGIC ## After the run: test as an attendee (manual, about 60–90 min)
 # MAGIC
-# MAGIC Drop your test schema so you start fresh, then re-run Step 6 to recreate it. Run this yourself in the SQL editor:
+# MAGIC Add **yourself** to `config.yaml` before the run, so you get a schema too. Then test **exactly the way an attendee will**:
+# MAGIC follow `attendees/01_instructions.md` in your schema, and time each step.
+# MAGIC
+# MAGIC | Sprint | Test | Pass when |
+# MAGIC |---|---|---|
+# MAGIC | 0 · Setup | Open your schema in Catalog Explorer | 10 tables, lineage to `hack_14oct`, you're the owner, no descriptions |
+# MAGIC | 1 · Dashboard | Create a dashboard on your tables, use the AI assistant for 3 visuals, add filters, publish | Published, and the AI assistant produces sensible charts |
+# MAGIC | 2 · Metric views | Create `mv_sales` in your schema from the starter (instructions, Appendix A), and query it with `MEASURE()` | It returns rows, and the dashboard can use the metric view as a dataset |
+# MAGIC | 2 · Bonus | Build the Custom Viz bullet chart (instructions, Appendix D) | The chart renders |
+# MAGIC | 3 · Genie quick win | Create a Genie space on your tables, and ask the 10 questions from the instructions | Expect several wrong or unclear answers (that's the point) |
+# MAGIC | 4a · Descriptions | AI-generate the descriptions for 2 tables, then re-ask | The answers get better |
+# MAGIC | 4b · Tuning | Add instructions (fiscal year, sales = NSV), sample questions, and the metric view | Most questions are now answered well |
+# MAGIC | 5 · App | Create an app, then use the 2 Genie Code prompts (instructions, Appendix C) | Tab 1 table and Tab 2 visuals work. Note the time it took |
+
+# COMMAND ----------
+
+# MAGIC %md
+# MAGIC ## After testing: clean up (manual)
+# MAGIC
+# MAGIC Drop your test schema, then run this notebook again to get a fresh copy. Run this yourself in the SQL editor:
 # MAGIC
 # MAGIC ```sql
 # MAGIC DROP SCHEMA <catalog>.<your_test_schema> CASCADE;   -- your test schema only, never hack_14oct
 # MAGIC ```
 # MAGIC
+# MAGIC The same applies if an attendee breaks their data: drop their schema and run this notebook again.
 # MAGIC Delete any test dashboards, Genie spaces and apps by hand. *After the event:* drop each attendee schema the same way, after agreeing
 # MAGIC with the customer what to keep.

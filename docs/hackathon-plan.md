@@ -52,7 +52,7 @@ already know the shape of the data, and the key insight (execution gaps costing 
 **Ground rules for the data:** fictional retailers, suppliers and brands only (no real client or retailer names), currency **ZAR**,
 a **South African** region/province store hierarchy, and a **March–February fiscal year**.
 
-There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.md`): no options and no roles. Every attendee builds the same thing with the same data.
+There is **one scenario for everyone** (section 8, in `attendees/01_instructions.md`): no options and no roles. Every attendee builds the same thing with the same data.
 
 ---
 
@@ -75,10 +75,10 @@ There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.
 
 **How it works**
 
-1. The facilitator fills in **one config file** (`hack_setup/config.yaml`: catalog, warehouse ID, attendee names and emails) and runs the runbook.
+1. The facilitator fills in **one config file** (`hack_setup/config.yaml`: catalog, warehouse ID, attendee names and emails) and clicks **Run all** on `hack_setup/00_facilitator_runbook`.
    It builds `hack_14oct` (**read-only** for attendees), grants access, and **creates one schema per attendee**, named after them, with a copy
    of every table, **owned by the attendee** (section 3.2).
-2. In Sprint 0, each attendee runs `attendees/01_attendee_setup` to check their schema and read the hints.
+2. In Sprint 0, each attendee opens their schema in Catalog Explorer and reads the hints in the attendee instructions.
 3. From then on, attendees work **only in their own schema**. Their dashboards, metric views, Genie space and app all point at it.
 4. Attendees **own the metadata** of their copy. They write the table and column descriptions themselves (section 5), and can change
    the copy freely (add columns, views, metric views, write-back) without affecting anyone else.
@@ -87,9 +87,9 @@ There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.
 
 | Benefit | Detail |
 |---|---|
-| Simple to administer | One config file, one catalog, one data load. The runbook does the grants and the attendee schemas |
+| Simple to administer | One config file, one catalog, one data load. One **Run all** does the data, the grants and the attendee schemas |
 | Attendees own their data **and its descriptions** | They can `COMMENT ON` tables and columns, accept AI-generated descriptions, `ALTER`, create metric views and write back without asking for grants. **This is why we copy instead of sharing one schema** |
-| Safe | `hack_14oct` is read-only. If an attendee breaks their data, the facilitator drops their schema and re-runs runbook Step 6 |
+| Safe | `hack_14oct` is read-only. If an attendee breaks their data, the facilitator drops their schema and runs the setup notebook again |
 | Attendees grant their own app's access | Each attendee owns their schema, so they can grant their app's service principal access themselves |
 | Shows Unity Catalog in action | Ownership, grants, lineage (`hack_14oct` → `<attendee_schema>` → metric view → dashboard/Genie), cloning |
 | Easy cleanup | `DROP SCHEMA <hack_catalog>.<attendee_schema> CASCADE`, or drop the whole catalog |
@@ -104,7 +104,7 @@ There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.
 
 - **20 attendees, each on their own**, each in their own schema. There are no attendees.
 - **Everyone does the same scenario** (section 8). No options, no special roles.
-- **Schema naming:** `01_attendee_setup` names the schema after the attendee's user name (for example `jane_doe`), unless they choose another name.
+- **Schema naming:** the setup notebook names each schema after the attendee's name in `config.yaml` (`Jane Doe` → `jane_doe`).
 - **Ownership:** whoever creates the schema owns it, so no ownership transfer is needed.
 - **Asset naming:** start with the attendee's initials: dashboard `JD – Trade Performance`, Genie space `JD – Trade Genie`, app `jd-command-centre`. Metric views go in the attendee's schema (`jane_doe.mv_sales`).
 
@@ -116,10 +116,10 @@ Use one existing catalog that the customer assigns, and create `hack_14oct` and 
 
 ## 3. Sample data design
 
-> **Status:** the data is **synthetic and generated** by the `02_generate_synthetic_data` notebook, which Step 3 of
-> `00_facilitator_runbook` calls. It writes the tables below **directly as Delta tables** in `hack_14oct`. Each attendee then copies them
-> into its own schema with `01_attendee_setup`.
-> The attendee guide, metric view template, Genie test questions and app prompts refer to these table and column names.
+> **Status:** the data is **synthetic and generated** by the `01_generate_synthetic_data` notebook, which Step 3 of
+> `00_facilitator_runbook` calls. It writes the tables below **directly as Delta tables** in `hack_14oct`. The same run then copies them
+> into every attendee's own schema (Step 6).
+> The attendee instructions, metric view template, Genie test questions and app prompts refer to these table and column names.
 
 The data needs to be *realistic and full of insight* (seasonality, under-performing regions, promo uplift, out-of-stock patterns) so that Genie
 and the dashboards have something to find.
@@ -147,7 +147,7 @@ and the dashboards have something to find.
 - **"Trap" questions for Genie:** ambiguous terms such as "sales" (gross or net?), "last quarter" (calendar or fiscal?), and "top stores"
   (by sales or by growth?). The raw-table Genie gets these wrong, and the tuned Genie gets them right. That's the before/after story.
 
-**Data checklist (facilitator, before T-3 days):** run runbook Step 3 (generate the data, then check that every table is ✅) and Step 4 (PK/FK constraints).
+**Data checklist (facilitator, before T-3 days):** fill in `config.yaml`, click **Run all** on the setup notebook, and check the Step 7 summary.
 
 ### 3.1a Description strategy: undocumented on purpose
 
@@ -176,8 +176,7 @@ ALTER TABLE <catalog>.jane_doe.fact_sales_weekly OWNER TO `jane.doe@…`;
 ALTER SCHEMA <catalog>.jane_doe OWNER TO `jane.doe@…`;
 ```
 
-`attendees/01_attendee_setup` uses the same naming rule. It reports the table count of an existing schema, or creates and fills the schema
-for someone who wasn't in the config file (that needs `CREATE SCHEMA` on the catalog).
+Someone who wasn't in the config file? Add them to `config.yaml` and run the setup notebook again: existing schemas aren't touched.
 
 
 > Metric views and descriptions are **not** pre-built in attendee schemas. Building them is the hackathon exercise (Sprints 2 and 4).
@@ -215,7 +214,7 @@ same thing everywhere.
 | **L4: Make it discoverable** | Add comments, display names and synonyms to the measures and dimensions | Genie and dashboard users understand the fields |
 | **L5: Reuse it** | Switch the dashboard datasets to the metric views, and add the metric views to the Genie space | The before/after comparison for the demo |
 
-Attendees get a partly filled metric view starter with TODOs in the attendee guide (Appendix A).
+Attendees get a partly filled metric view starter with TODOs in the attendee instructions (Appendix A).
 
 > Attendees can also build metric views in the **Catalog Explorer UI** (with the Assistant's help) instead of writing YAML. Both routes are valid.
 
@@ -226,7 +225,7 @@ Attendees get a partly filled metric view starter with TODOs in the attendee gui
 ### Quick win (Sprint 3)
 
 1. Create a Genie space on the attendee's tables as they are: **undocumented** (`fact_sales_weekly`, the dims, and `fact_store_visits`).
-2. Ask the **10 questions** from the attendee guide (Sprint 3), and note which answers look wrong or unclear.
+2. Ask the **10 questions** from the attendee instructions (Sprint 3), and note which answers look wrong or unclear.
 
 ### Sprint 4a: describe your data in Unity Catalog (key capability)
 
@@ -241,7 +240,7 @@ then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboar
 | **4. Tags** | Add governed tags such as `domain=sales`, `kpi=true`, `pii=false` | Shows governance and makes data easier to find |
 | **5. Re-ask Genie** | Ask the same 10 questions again, **without changing anything else** | Compare the answers. This shows the value of good metadata |
 
-**What a good description includes** (on the attendee guide cheat-sheet): the business meaning, the **unit and currency**, the **grain**
+**What a good description includes** (on the attendee instructions cheat-sheet): the business meaning, the **unit and currency**, the **grain**
 ("one row per store, SKU and week"), allowed values or codes, **abbreviations spelled out**, and common synonyms ("OSA, availability, in-stock").
 
 
@@ -264,7 +263,7 @@ then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboar
 | Time | Sprint | Content | Checkpoint |
 |---|---|---|---|
 | 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, rules, and the scenario | Ready |
-| 0:15 – 0:30 | **Sprint 0: Attendee setup** | Run `01_attendee_setup` (check your pre-created schema), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
+| 0:15 – 0:30 | **Sprint 0: Attendee setup** | Check your pre-created schema in Catalog Explorer, then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
 | 0:30 – 1:00 | **Sprint 1: Dashboard quick win** | 5 min demo, then 25 min build: a dashboard straight on the attendee tables, using the AI assistant to create widgets, plus filters, then publish | **First dashboard published** |
 | 1:00 – 1:45 | **Sprint 2: Metric views** | 10 min demo, then 35 min build: metric view ladder L1–L5, and switch the dashboard to the metric views | **Dashboard v2 on metric views** |
 | 1:45 – 1:55 | Break | | |
@@ -344,7 +343,7 @@ review and deploy what it builds. The app has two tabs, built one stage at a tim
 
 ## 8. The scenario (the same for everyone)
 
-**Monday Command Centre** (all in `attendees/attendee-guide.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
+**Monday Command Centre** (all in `attendees/01_instructions.md`): *"How did we sell? Are we on budget? What is happening on the shelf?"*
 
 | Part | What everyone builds |
 |---|---|
@@ -370,7 +369,7 @@ that Genie only handles well after the data is described and the space is tuned.
 | 5 | Make the facilitator the owner of `<hack_catalog>` (the runbook then grants attendees `USE CATALOG` from the config file) | Customer admin | T-1 week |
 | 6 | Create **2 serverless SQL warehouses** (Medium, autoscale 1–3), with `CAN USE` for the participants | Customer admin / facilitator | T-1 week |
 | 7 | Confirm Genie Code and Apps are enabled and the app quota is ≥ 20 (or pre-create the apps) | Customer admin / facilitator | T-1 week |
-| 8 | Generate `hack_14oct` (runbook), run the grants, and test as an attendee (non-admin user) | Facilitator | T-3 days |
+| 8 | Run the setup notebook (data, grants, attendee schemas), and test as an attendee (non-admin user) | Facilitator | T-3 days |
 | 9 | Dry run as a test participant through every sprint, then drop the test schema | Facilitator | T-2 days |
 | 10 | Make sure every user can log in (SSO/MFA) to the workspace URL | Customer | T-1 day |
 
@@ -394,15 +393,15 @@ Attendees own their schema, so they need no other grants on it. To show their wo
 ```
 databricks-aibi-hackathon/
 ├── README.md
-├── attendees/                     ← everything attendees need
-│   ├── attendee-guide.md          ← step-by-step guide: business questions, sprints, Genie questions, troubleshooting, cheat-sheets, app prompts, bonus custom visual
-│   └── 01_attendee_setup          ← every attendee runs this first: create their own schema and copy every table from hack_14oct
+├── .gitignore                     ← keeps hack_setup/config.yaml (real emails and IDs) out of the repo
+├── attendees/                     ← instructions only (share with attendees)
+│   └── 01_instructions.md         ← the hackathon, sprint by sprint (a future 02_… file can hold advanced scenarios)
 ├── docs/
 │   └── hackathon-plan.md          ← facilitator plan (this file)
 └── hack_setup/                    ← facilitator only: everything to set up the hackathon
-    ├── config.example.yaml        ← copy to config.yaml (git-ignored): catalog, warehouse ID, attendee names and emails
-    ├── 00_facilitator_runbook     ← create hack_14oct, generate the data, constraints, grants, test
-    └── 02_generate_synthetic_data ← synthetic data generator (called by the runbook)
+    ├── config.example.yaml        ← copy to config.yaml: catalog, warehouse ID, attendee names and emails
+    ├── 00_facilitator_runbook     ← Run all: hack_14oct + synthetic data + constraints + grants + one schema per attendee
+    └── 01_generate_synthetic_data ← synthetic data generator (called by the runbook)
 ```
 
 
@@ -430,7 +429,7 @@ databricks-aibi-hackathon/
 | Metric view YAML errors slow attendees down | The partly filled starter in the guide, the UI-based route, and the Assistant |
 | Genie already answers well before tuning (no visible improvement) | Leave `hack_14oct` undocumented, use business abbreviations in column names, and plant ambiguous "trap" questions and fiscal-calendar rules in the test set |
 | AI-generated descriptions are accepted without review, so they're plausible but wrong | Each attendee reviews them, and re-asking the questions shows whether descriptions actually helped |
-| An attendee breaks its data | Re-run `01_attendee_setup`. `hack_14oct` is read-only |
+| An attendee breaks their data | Drop their schema and run the setup notebook again. `hack_14oct` is read-only |
 | Extra or oddly named schemas | Naming convention, and a facilitator check after Sprint 0 |
 | The app SP has no access | Pre-created apps, with the SP given `USE CATALOG` and warehouse access in advance; attendees grant schema access themselves |
 

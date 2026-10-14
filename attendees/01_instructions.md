@@ -1,4 +1,4 @@
-# Perfect Store Command Centre: Attendee Guide
+# Perfect Store Command Centre: Attendee Instructions
 
 **Databricks Hackathon · 4 hours · AI/BI Dashboards · Metric Views · Genie · Databricks Apps**
 
@@ -42,13 +42,12 @@ Your facilitator gives you these values. Write them down, because you'll need th
 | Catalog | `<hack_catalog>` |
 | Source data (read-only) | `<hack_catalog>.hack_14oct` |
 | Your schema | `<hack_catalog>.<your_name>`: already created for you by your facilitator, named after you (for example `jane_doe`) |
-| SQL warehouse ID | `<warehouse_id>`: you enter it in the setup notebook, and use this warehouse for your dashboard, Genie space and app |
-| Setup notebook | `attendees/01_attendee_setup` (in the hackathon folder in the workspace) |
+| SQL warehouse ID | `<warehouse_id>`: use this warehouse for your dashboard, Genie space and app |
 
 **Checklist before Sprint 0:**
 - ☐ I can log in to the workspace
 - ☐ I have the catalog name and the SQL warehouse ID
-- ☐ I can open the hackathon folder and see `attendees/01_attendee_setup`
+- ☐ I can see my schema in **Catalog Explorer** → `<hack_catalog>`
 
 ---
 
@@ -99,7 +98,7 @@ Your schema contains these tables. Each one is a copy of `hack_14oct`. Working o
 
 ## 4. Rules
 
-1. Work **only in your own schema**. `hack_14oct` is read-only, and you copy from it once (Sprint 0).
+1. Work **only in your own schema** (your facilitator created it for you). `hack_14oct` is the read-only original.
 2. Start every name with your initials: dashboard `JD – …`, Genie space `JD – …`, app `jd-…`. Metric views go in your schema as `mv_…`.
 3. Use the **AI help everywhere**: the Databricks Assistant, AI-generated descriptions, the dashboard AI assistant, and Genie Code for the app.
 4. After each improvement, **re-ask the same Genie questions** and compare the answers.
@@ -113,7 +112,7 @@ Your schema contains these tables. Each one is a copy of `hack_14oct`. Working o
 | Time | Sprint | What you do | Done when |
 |---|---|---|---|
 | 0:00 – 0:15 | Kick-off | Hear the storyline and the business questions | Ready |
-| 0:15 – 0:30 | **0. Your setup** | Create your own schema and copy the data into it | ✅ Tables in your schema |
+| 0:15 – 0:30 | **0. Your setup** | Check your schema (already created for you) and read the hints | ✅ 10 tables in your schema |
 | 0:30 – 1:00 | **1. Dashboard quick win** | Build a first dashboard straight on your tables | ✅ Dashboard v1 published |
 | 1:00 – 1:45 | **2. Metric views** | Define your KPIs once as metric views, and rebuild the dashboard on them | ✅ Dashboard v2 on metric views |
 | 1:45 – 1:55 | Break | | |
@@ -134,24 +133,29 @@ Your facilitator has **already created your schema**, named after you (for examp
 `hack_14oct`, and **you own it**, so you can describe and change everything in it.
 
 **Steps**
-1. Open the hackathon folder in the workspace, then open **`attendees/01_attendee_setup`**.
-2. Attach the notebook to **serverless** compute (top right: *Connect* → *Serverless*).
-3. Check the widgets at the top. They're usually **pre-filled**:
-   - `catalog`: the catalog name from your facilitator
-   - `warehouse_id`: the SQL warehouse ID from your facilitator
-   - `my_schema`: **leave it blank**. Your schema is named after you.
-4. Click **Run all**. The notebook:
-   - checks that you can use the SQL warehouse
-   - finds your schema and reports **how many tables** it has (you should see 10). If your schema doesn't exist yet, it creates it and copies the data.
-   - shows that **0% of the columns are described** and that you have **no metric views** yet
-5. Read the **💡 Hints** section at the end of the notebook. It explains what you'll need to add during the day.
+1. Open **Catalog Explorer** (left sidebar) → `<hack_catalog>` → **your schema** (named after you, for example `jane_doe`).
+2. Check that it has **10 tables**, and that **you're the owner** (schema → *Details*).
+3. Open `fact_sales_weekly` → **Sample data**, and the **Lineage** tab (your table comes from `hack_14oct`).
+4. Notice what's missing: the column names are cryptic, some values are codes, there are **no descriptions** and **no metric views**.
+   Read the [💡 hints](#hints-how-to-get-good-results) below: they explain what you'll add during the day.
 
 **Check your work**
-- Open **Catalog Explorer** (left sidebar) → `<hack_catalog>` → your schema. You should see 10 tables, with you as the owner.
-- Open `fact_sales_weekly` → **Sample data**. Look at the column names. Can you guess what `nsv`, `gp` or `prm_flg` mean?
-- Open the **Lineage** tab. You'll see your table comes from `hack_14oct`.
+- 10 tables in your schema, with you as the owner.
+- Can you guess what `nsv`, `gp` or `prm_flg` mean? (You'll describe them properly in Sprint 4a.)
 
-> **Broke your data later?** Ask your facilitator. Running the setup notebook again doesn't overwrite an existing schema.
+### Hints: how to get good results
+
+| If you see this… | …try this |
+|---|---|
+| The dashboard AI assistant picks the wrong column ("sales" → `gsv` instead of `nsv`) | **Add column descriptions** (Catalog Explorer → table → *AI generate* → review → save), or build the visual on a **metric view** measure |
+| Every widget repeats the same SQL (`SUM(gp) / SUM(nsv)`) | **Create a metric view** with a `Margin %` measure once, and reuse it in every widget |
+| Margin % looks wrong when you change the grouping | Define it as a **ratio measure in a metric view** (`SUM(gp) / SUM(nsv)`), not an average of percentages |
+| Genie doesn't know what `nsv`, `osa_pct` or `fmt_cd = 'HYP'` mean | **Describe the columns and codes** in Unity Catalog, then add **synonyms** in the Genie space |
+| Genie gets "last quarter" or "this year" wrong | Describe the fiscal columns in `dim_date` and add an **instruction**: the fiscal year runs March–February |
+| Genie joins the wrong tables | Check the **PK/FK constraints** (already there), describe the key columns, or add the **metric view** to the space |
+| Genie's numbers differ from your dashboard | Point both at the **same metric view**, so they share one definition of each KPI |
+
+> **Broke your data later?** Ask your facilitator. They can give you a fresh copy.
 
 ---
 
@@ -355,8 +359,8 @@ Tell a **before → after** story:
 
 | Problem | What to do |
 |---|---|
-| `01_attendee_setup` says *permission denied* on the catalog or `hack_14oct` | Ask your facilitator to check that you're in the attendee list (they grant `USE CATALOG`, and `SELECT` on `hack_14oct` |
-| The setup notebook warns it can't access the warehouse | Check the warehouse ID, or ask your facilitator for **CAN USE** on the warehouse |
+| I can't see the catalog or my schema, or I get *permission denied* | Ask your facilitator to check that you're in the attendee list (they grant `USE CATALOG`, and `SELECT` on `hack_14oct` |
+| I can't use the SQL warehouse | Check the warehouse ID, or ask your facilitator for **CAN USE** on the warehouse |
 | My tables are messed up | Ask your facilitator. They can drop your schema and create a fresh copy |
 | Metric view YAML error | Check the indentation (spaces only), the `$$ … $$` around the YAML, and that every column name exists in the table |
 | `MEASURE()` error | Use the **measure name** from your YAML, in backticks if it has spaces or symbols: ``MEASURE(`Margin %`)`` |

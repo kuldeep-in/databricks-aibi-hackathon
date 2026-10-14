@@ -22,15 +22,14 @@ tables into their own schema, so they own the data **and its descriptions**.
 ## Repository layout
 
 ```
-attendees/                     # everything attendees need (share this folder)
-├── attendee-guide.md          # step-by-step guide: business questions, sprints, Genie questions, troubleshooting, cheat-sheets, app prompts, bonus custom visual
-└── 01_attendee_setup.py       # every attendee runs this first: create their own schema, then deep clone every table from hack_14oct
+attendees/                     # instructions only (share this folder with attendees)
+└── 01_instructions.md         # the hackathon, sprint by sprint: business questions, Genie questions, hints, troubleshooting, app prompts, bonus custom visual
 docs/
 └── hackathon-plan.md          # facilitator plan: agenda, data strategy, metric views, Genie ladder, grants, risks
 hack_setup/                    # facilitator only: everything to set up the hackathon
 ├── config.example.yaml        # copy to config.yaml (git-ignored): catalog, warehouse ID, attendee names and emails
-├── 00_facilitator_runbook.py  # step-by-step setup and test: schema, synthetic data as Delta tables in hack_14oct, constraints, grants, testing
-└── 02_generate_synthetic_data.py  # synthetic, fictional dataset generator (called from runbook Step 3)
+├── 00_facilitator_runbook.py  # Run all: read-only hack_14oct with synthetic data, constraints, grants, one schema per attendee
+└── 01_generate_synthetic_data.py  # synthetic, fictional dataset generator (called by the runbook)
 ```
 
 ## Getting started (facilitator)
@@ -38,8 +37,9 @@ hack_setup/                    # facilitator only: everything to set up the hack
 1. Clone this repo into your Databricks workspace as a Git folder (or import the `attendees/`, `docs/` and `hack_setup/` folders).
 2. In `hack_setup/`, copy `config.example.yaml` to `config.yaml` and fill in the catalog, warehouse ID and attendee names and emails.
    `config.yaml` is git-ignored, so real emails and IDs are never committed.
-3. Open `hack_setup/00_facilitator_runbook` and run it **step by step**: it reads `config.yaml`, generates the data, grants access and creates every attendee's schema.
-4. Test as an attendee (runbook Step 7): add yourself to `config.yaml`, then run `attendees/01_attendee_setup` and follow the attendee guide.
-5. Fill in the placeholders in `attendees/attendee-guide.md` (workspace URL, catalog, warehouse ID) and share the `attendees/` folder with attendees.
+3. Open `hack_setup/00_facilitator_runbook` and click **Run all**. One execution reads `config.yaml`, builds the read-only `hack_14oct`
+   with the synthetic data, grants access, and creates every attendee's schema (owned by them).
+4. Test as an attendee: add yourself to `config.yaml` before the run, then follow `attendees/01_instructions.md` in your schema.
+5. Fill in the placeholders in `attendees/01_instructions.md` (workspace URL, catalog, warehouse ID) and share the `attendees/` folder with attendees.
 
 > No data files are included: the runbook generates a fully synthetic, fictional dataset.
