@@ -3,7 +3,7 @@
 # MAGIC # 02 · Synthetic data generator: Perfect Store Command Centre
 # MAGIC
 # MAGIC Generates a **fully synthetic, fictional** retail-execution dataset straight into the source schema as Delta tables.
-# MAGIC No real retailers, suppliers, brands or people. Usually called from **Step 3** of `00_facilitator_runbook`, but it can also be run on its own.
+# MAGIC No real retailers, suppliers, brands or people. Usually called from **Step 3** of `00_facilitator_runbook`, but it can also be run on its own. It reads `config.yaml` in this folder.
 # MAGIC
 # MAGIC | Table | Grain | Default size |
 # MAGIC |---|---|---|
@@ -35,15 +35,17 @@
 
 # COMMAND ----------
 
-dbutils.widgets.text("catalog", "<your_catalog>", "1. Catalog")
-
-# COMMAND ----------
-
 import random, datetime as dt
 from pyspark.sql import functions as F
 
-catalog = dbutils.widgets.get("catalog").strip()
-schema = "hack_14oct"   # target (source) schema
+import os, yaml
+
+# Settings come from config.yaml in this folder (copy config.example.yaml to config.yaml first)
+nb_dir = os.path.dirname(dbutils.notebook.entry_point.getDbutils().notebook().getContext().notebookPath().get())
+with open(os.path.join(nb_dir if nb_dir.startswith("/Workspace") else "/Workspace" + nb_dir, "config.yaml")) as fh:
+    cfg = yaml.safe_load(fh)
+catalog = cfg["catalog"].strip()
+schema = cfg.get("source_schema", "hack_14oct").strip()   # target (source) schema
 
 # Fixed sizes (edit here if needed)
 N_STORES = 120       # stores

@@ -1,0 +1,2 @@
+# Real hackathon settings (catalog, warehouse ID, attendee emails). Never commit them.
+hack_setup/config.yaml

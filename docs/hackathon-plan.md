@@ -75,8 +75,10 @@ There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.
 
 **How it works**
 
-1. The facilitator builds `hack_14oct` before the day and makes it **read-only** for all participants.
-2. At the start, each attendee **creates their own schema** (named after them) and **copies the source tables into it** with a ready-made notebook (section 3.2).
+1. The facilitator fills in **one config file** (`hack_setup/config.yaml`: catalog, warehouse ID, attendee names and emails) and runs the runbook.
+   It builds `hack_14oct` (**read-only** for attendees), grants access, and **creates one schema per attendee**, named after them, with a copy
+   of every table, **owned by the attendee** (section 3.2).
+2. In Sprint 0, each attendee runs `attendees/01_attendee_setup` to check their schema and read the hints.
 3. From then on, attendees work **only in their own schema**. Their dashboards, metric views, Genie space and app all point at it.
 4. Attendees **own the metadata** of their copy. They write the table and column descriptions themselves (section 5), and can change
    the copy freely (add columns, views, metric views, write-back) without affecting anyone else.
@@ -85,9 +87,9 @@ There is **one scenario for everyone** (section 8, in `attendees/attendee-guide.
 
 | Benefit | Detail |
 |---|---|
-| Simple to administer | One catalog, one data load, one small grant script |
+| Simple to administer | One config file, one catalog, one data load. The runbook does the grants and the attendee schemas |
 | Attendees own their data **and its descriptions** | They can `COMMENT ON` tables and columns, accept AI-generated descriptions, `ALTER`, create metric views and write back without asking for grants. **This is why we copy instead of sharing one schema** |
-| Safe | `hack_14oct` is read-only. An attendee that breaks its own data just re-runs the copy script |
+| Safe | `hack_14oct` is read-only. If an attendee breaks their data, the facilitator drops their schema and re-runs runbook Step 6 |
 | Attendees grant their own app's access | Each attendee owns their schema, so they can grant their app's service principal access themselves |
 | Shows Unity Catalog in action | Ownership, grants, lineage (`hack_14oct` → `<attendee_schema>` → metric view → dashboard/Genie), cloning |
 | Easy cleanup | `DROP SCHEMA <hack_catalog>.<attendee_schema> CASCADE`, or drop the whole catalog |
@@ -157,22 +159,26 @@ Writing descriptions is a **key capability to showcase**, so the `hack_14oct` ta
 
 Attendees ask Genie the same questions before and after describing the data, and see the difference (section 5).
 
-### 3.2 Attendee setup notebook (each attendee runs it in Sprint 0)
+### 3.2 Attendee schemas (created by the facilitator from the config file)
 
-The facilitator provides one notebook, `attendees/01_attendee_setup`. Each attendee enters the catalog and the SQL warehouse ID, and clicks **Run all** (about 1–2 minutes). It does this:
+Runbook **Step 6** reads the attendee list from `hack_setup/config.yaml` and, for each attendee:
 
 ```sql
--- 1. Create the attendee's own schema (named after the user by default, for example jane_doe)
-CREATE SCHEMA IF NOT EXISTS <catalog>.jane_doe COMMENT 'Perfect Store hackathon: working schema, copied from hack_14oct';
+-- 1. Create the attendee's schema, named after their NAME (Jane Doe -> jane_doe). Existing schemas are left alone.
+CREATE SCHEMA <catalog>.jane_doe COMMENT 'Perfect Store hackathon: working schema of jane.doe@…, copied from hack_14oct';
 
--- 2. Copy every source table. DEEP CLONE makes an independent copy.
---    (The notebook loops over information_schema.tables, so the list never goes stale.)
+-- 2. Copy every source table (DEEP CLONE = an independent copy), and add the PK/FK constraints
 CREATE OR REPLACE TABLE <catalog>.jane_doe.fact_sales_weekly DEEP CLONE <catalog>.hack_14oct.fact_sales_weekly;
 -- ... the same for every dim_* / fact_* / visit_notes table
 
--- 3. Re-apply the PK/FK constraints (read from the source)
--- 4. Validation: row counts match hack_14oct, plus hints: 0% described and no metric views yet
+-- 3. Make the attendee the owner of every table and of the schema
+ALTER TABLE <catalog>.jane_doe.fact_sales_weekly OWNER TO `jane.doe@…`;
+ALTER SCHEMA <catalog>.jane_doe OWNER TO `jane.doe@…`;
 ```
+
+`attendees/01_attendee_setup` uses the same naming rule. It reports the table count of an existing schema, or creates and fills the schema
+for someone who wasn't in the config file (that needs `CREATE SCHEMA` on the catalog).
+
 
 > Metric views and descriptions are **not** pre-built in attendee schemas. Building them is the hackathon exercise (Sprints 2 and 4).
 
@@ -258,7 +264,7 @@ then used everywhere:** by Genie, the Databricks Assistant, AI-assisted dashboar
 | Time | Sprint | Content | Checkpoint |
 |---|---|---|---|
 | 0:00 – 0:15 | **Kick-off** | Goals, the "quick win then improve" approach, the **Perfect Store Command Centre** storyline, rules, and the scenario | Ready |
-| 0:15 – 0:30 | **Sprint 0: Attendee setup** | Run `01_attendee_setup` (create your own schema, copy the data from `hack_14oct`), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
+| 0:15 – 0:30 | **Sprint 0: Attendee setup** | Run `01_attendee_setup` (check your pre-created schema), then a quick Catalog Explorer tour (lineage, ownership, and notice that the tables have **no descriptions** yet) | Team schema ready |
 | 0:30 – 1:00 | **Sprint 1: Dashboard quick win** | 5 min demo, then 25 min build: a dashboard straight on the attendee tables, using the AI assistant to create widgets, plus filters, then publish | **First dashboard published** |
 | 1:00 – 1:45 | **Sprint 2: Metric views** | 10 min demo, then 35 min build: metric view ladder L1–L5, and switch the dashboard to the metric views | **Dashboard v2 on metric views** |
 | 1:45 – 1:55 | Break | | |
@@ -361,26 +367,25 @@ that Genie only handles well after the data is described and the space is tuned.
 | 2 | Turn on **partner-powered AI features** and the Databricks Assistant | Customer admin | T-2 weeks |
 | 3 | Create the catalog `<hack_catalog>` (with a managed storage location if the metastore has no default) | Customer admin | T-2 weeks |
 | 4 | Create the account group `<hackathon_participants>` (20 users) | Customer admin | T-1 week |
-| 5 | Make the facilitator the owner of `<hack_catalog>`, and give participants `USE CATALOG` + `CREATE SCHEMA` on it | Customer admin | T-1 week |
+| 5 | Make the facilitator the owner of `<hack_catalog>` (the runbook then grants attendees `USE CATALOG` from the config file) | Customer admin | T-1 week |
 | 6 | Create **2 serverless SQL warehouses** (Medium, autoscale 1–3), with `CAN USE` for the participants | Customer admin / facilitator | T-1 week |
 | 7 | Confirm Genie Code and Apps are enabled and the app quota is ≥ 20 (or pre-create the apps) | Customer admin / facilitator | T-1 week |
 | 8 | Generate `hack_14oct` (runbook), run the grants, and test as an attendee (non-admin user) | Facilitator | T-3 days |
 | 9 | Dry run as a test participant through every sprint, then drop the test schema | Facilitator | T-2 days |
 | 10 | Make sure every user can log in (SSO/MFA) to the workspace URL | Customer | T-1 day |
 
-### Grant script (run once by the facilitator)
+### Grants (done by runbook Step 5, from the config file)
+
+For every attendee in `hack_setup/config.yaml`, the runbook grants to their email:
 
 ```sql
--- Catalog: everyone can enter it and create their own schema
-GRANT USE CATALOG, CREATE SCHEMA ON CATALOG <hack_catalog> TO `<hackathon_participants>`;
-
--- Source schema: read-only for participants
-GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.hack_14oct TO `<hackathon_participants>`;
-
+GRANT USE CATALOG ON CATALOG <hack_catalog> TO `jane.doe@…`;                 -- enter the catalog (no CREATE SCHEMA needed)
+GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.hack_14oct TO `jane.doe@…`;   -- read-only source
+-- plus CAN USE on the SQL warehouse from config.yaml (through the Databricks SDK)
 ```
 
-Attendee schemas need **no facilitator grants**, because each attendee owns the schema they create. To show their work in the demos,
-an attendee can run `GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.jane_doe TO \`<hackathon_participants>\`;`
+Attendees own their schema, so they need no other grants on it. To show their work in the demos, an attendee can run
+`GRANT USE SCHEMA, SELECT ON SCHEMA <hack_catalog>.jane_doe TO \`<hackathon_participants>\`;`
 
 ---
 
@@ -395,6 +400,7 @@ databricks-aibi-hackathon/
 ├── docs/
 │   └── hackathon-plan.md          ← facilitator plan (this file)
 └── hack_setup/                    ← facilitator only: everything to set up the hackathon
+    ├── config.example.yaml        ← copy to config.yaml (git-ignored): catalog, warehouse ID, attendee names and emails
     ├── 00_facilitator_runbook     ← create hack_14oct, generate the data, constraints, grants, test
     └── 02_generate_synthetic_data ← synthetic data generator (called by the runbook)
 ```

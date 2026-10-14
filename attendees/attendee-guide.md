@@ -41,7 +41,7 @@ Your facilitator gives you these values. Write them down, because you'll need th
 | Workspace URL | `<workspace-url>` |
 | Catalog | `<hack_catalog>` |
 | Source data (read-only) | `<hack_catalog>.hack_14oct` |
-| Your schema | `<hack_catalog>.<your_name>`: created for you by the setup notebook, named after you (for example `jane_doe`) |
+| Your schema | `<hack_catalog>.<your_name>`: already created for you by your facilitator, named after you (for example `jane_doe`) |
 | SQL warehouse ID | `<warehouse_id>`: you enter it in the setup notebook, and use this warehouse for your dashboard, Genie space and app |
 | Setup notebook | `attendees/01_attendee_setup` (in the hackathon folder in the workspace) |
 
@@ -128,28 +128,30 @@ Your schema contains these tables. Each one is a copy of `hack_14oct`. Working o
 
 ## Sprint 0: Your setup (15 min)
 
-**Goal:** your own schema, with a full copy of the hackathon data.
+**Goal:** check that your own schema is ready, with a full copy of the hackathon data.
+
+Your facilitator has **already created your schema**, named after you (for example `jane_doe`). It holds a copy of every table from
+`hack_14oct`, and **you own it**, so you can describe and change everything in it.
 
 **Steps**
 1. Open the hackathon folder in the workspace, then open **`attendees/01_attendee_setup`**.
 2. Attach the notebook to **serverless** compute (top right: *Connect* → *Serverless*).
-3. Fill in the widgets at the top:
+3. Check the widgets at the top. They're usually **pre-filled**:
    - `catalog`: the catalog name from your facilitator
    - `warehouse_id`: the SQL warehouse ID from your facilitator
-   - `my_schema`: **leave it blank**. Your schema is named after you (for example `jane_doe`).
-4. Click **Run all**. It takes 1–2 minutes. The notebook will:
-   - create your schema
-   - copy every table from `hack_14oct` with `DEEP CLONE` (an independent copy you can change freely)
-   - copy the primary and foreign keys (Genie uses them to join tables)
-   - check the row counts, and show that **0% of the columns are described** and that you have **no metric views** yet
+   - `my_schema`: **leave it blank**. Your schema is named after you.
+4. Click **Run all**. The notebook:
+   - checks that you can use the SQL warehouse
+   - finds your schema and reports **how many tables** it has (you should see 10). If your schema doesn't exist yet, it creates it and copies the data.
+   - shows that **0% of the columns are described** and that you have **no metric views** yet
 5. Read the **💡 Hints** section at the end of the notebook. It explains what you'll need to add during the day.
 
 **Check your work**
-- Open **Catalog Explorer** (left sidebar) → `<hack_catalog>` → your schema. You should see 10 tables.
+- Open **Catalog Explorer** (left sidebar) → `<hack_catalog>` → your schema. You should see 10 tables, with you as the owner.
 - Open `fact_sales_weekly` → **Sample data**. Look at the column names. Can you guess what `nsv`, `gp` or `prm_flg` mean?
 - Open the **Lineage** tab. You'll see your table comes from `hack_14oct`.
 
-> **Broke your data later?** Just run `01_attendee_setup` again. It resets your tables. Your dashboards, metric views and Genie space aren't affected.
+> **Broke your data later?** Ask your facilitator. Running the setup notebook again doesn't overwrite an existing schema.
 
 ---
 
@@ -353,9 +355,9 @@ Tell a **before → after** story:
 
 | Problem | What to do |
 |---|---|
-| `01_attendee_setup` says *permission denied* on the catalog or `hack_14oct` | Ask your facilitator for `USE CATALOG` + `CREATE SCHEMA` on the catalog, and `SELECT` on `hack_14oct` |
+| `01_attendee_setup` says *permission denied* on the catalog or `hack_14oct` | Ask your facilitator to check that you're in the attendee list (they grant `USE CATALOG`, and `SELECT` on `hack_14oct` |
 | The setup notebook warns it can't access the warehouse | Check the warehouse ID, or ask your facilitator for **CAN USE** on the warehouse |
-| My tables are messed up | Run `01_attendee_setup` again. It resets your copy |
+| My tables are messed up | Ask your facilitator. They can drop your schema and create a fresh copy |
 | Metric view YAML error | Check the indentation (spaces only), the `$$ … $$` around the YAML, and that every column name exists in the table |
 | `MEASURE()` error | Use the **measure name** from your YAML, in backticks if it has spaces or symbols: ``MEASURE(`Margin %`)`` |
 | Dashboard visual shows no data | Check the filters and the dataset, and that the dashboard uses the hackathon warehouse |
