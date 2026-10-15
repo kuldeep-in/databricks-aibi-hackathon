@@ -394,7 +394,8 @@ Attendees own their schema, so they need no other grants on it. To show their wo
 databricks-aibi-hackathon/
 ├── README.md
 ├── attendees/                     ← instructions only (share with attendees)
-│   └── 01_instructions.md         ← the hackathon, sprint by sprint (a future 02_… file can hold advanced scenarios)
+│   ├── 01_instructions.md         ← the hackathon, sprint by sprint (a future 02_… file can hold advanced scenarios)
+│   └── metric_views_example.md    ← what complete metric views look like, linked from Sprint 2
 ├── docs/
 │   └── hackathon-plan.md          ← facilitator plan (this file)
 └── hack_setup/                    ← facilitator only: everything to set up the hackathon

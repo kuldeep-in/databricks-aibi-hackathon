@@ -17,18 +17,17 @@ At the start of each sprint a facilitator gives a short demo. Watch it, then com
 2. [How the day works](#2-how-the-day-works)
 3. [The business questions and the data](#3-the-business-questions-and-the-data)
 4. [Rules](#4-rules)
-5. [The day at a glance](#5-the-day-at-a-glance)
-6. [Sprint 0: Your setup](#sprint-0-your-setup-15-min)
-7. [Sprint 1: Dashboard quick win](#sprint-1-dashboard-quick-win-30-min)
-8. [Sprint 2: Metric views](#sprint-2-metric-views-45-min)
-9. [Sprint 3: Genie quick win](#sprint-3-genie-quick-win-25-min)
-10. [Sprint 4a: Describe your data](#sprint-4a-describe-your-data-20-min)
-11. [Sprint 4b: Tune Genie](#sprint-4b-tune-genie-30-min)
-12. [Sprint 5: App](#sprint-5-app-20-min)
-13. [Demo](#demo-5-volunteers-3-minutes-each)
-14. [Troubleshooting](#troubleshooting)
-15. Appendices: [A. Metric view starter](#appendix-a-metric-view-starter-fill-in-the-todos) · [B. Cheat-sheets](#appendix-b-cheat-sheets) ·
-    [C. App prompts](#appendix-c-app-with-genie-code) · [D. Bonus custom visual](#appendix-d--bonus-custom-visual-vega-lite)
+5. [Sprint 0: Your setup](#sprint-0-your-setup)
+6. [Sprint 1: Dashboard quick win](#sprint-1-dashboard-quick-win)
+7. [Sprint 2: Metric views](#sprint-2-metric-views)
+8. [Sprint 3: Genie quick win](#sprint-3-genie-quick-win)
+9. [Sprint 4a: Describe your data](#sprint-4a-describe-your-data)
+10. [Sprint 4b: Tune Genie](#sprint-4b-tune-genie)
+11. [Sprint 5: App](#sprint-5-app)
+12. [Demo](#demo-5-volunteers-3-minutes-each)
+13. [Troubleshooting](#troubleshooting)
+14. Appendices: [A. Metric view starters](#appendix-a-metric-view-starters-fill-in-the-todos) · [B. Cheat-sheets](#appendix-b-cheat-sheets) ·
+    [C. App prompts](#appendix-c-app-with-genie-code) · [D. Bonus custom visual](#appendix-d-bonus-custom-visual)
 
 ---
 
@@ -107,25 +106,7 @@ Your schema contains these tables. Each one is a copy of `hack_14oct`. Working o
 
 ---
 
-## 5. The day at a glance
-
-| Time | Sprint | What you do | Done when |
-|---|---|---|---|
-| 0:00 – 0:15 | Kick-off | Hear the storyline and the business questions | Ready |
-| 0:15 – 0:30 | **0. Your setup** | Check your schema (already created for you) and read the hints | ✅ 10 tables in your schema |
-| 0:30 – 1:00 | **1. Dashboard quick win** | Build a first dashboard straight on your tables | ✅ Dashboard v1 published |
-| 1:00 – 1:45 | **2. Metric views** | Define your KPIs once as metric views, and rebuild the dashboard on them | ✅ Dashboard v2 on metric views |
-| 1:45 – 1:55 | Break | | |
-| 1:55 – 2:20 | **3. Genie quick win** | Create a Genie space and ask the 10 questions | ✅ Genie space created |
-| 2:20 – 2:40 | **4a. Describe your data** | Add table and column descriptions in Unity Catalog, then re-ask the 10 questions | ✅ Tables described |
-| 2:40 – 3:10 | **4b. Tune Genie** | Instructions, sample questions, SQL expressions, metric views | ✅ Genie tuned |
-| 3:10 – 3:30 | **5. App** | Build a two-tab app with Genie Code: data table, then visuals | ✅ App deployed |
-| 3:30 – 3:55 | Demos | 5 volunteers: 3 min demo + 1 min Q&A each | |
-| 3:55 – 4:00 | Wrap-up | | |
-
----
-
-## Sprint 0: Your setup (15 min)
+## Sprint 0: Your setup
 
 **Goal:** check that your own schema is ready, with a full copy of the hackathon data.
 
@@ -159,7 +140,7 @@ Your facilitator has **already created your schema**, named after you (for examp
 
 ---
 
-## Sprint 1: Dashboard quick win (30 min)
+## Sprint 1: Dashboard quick win
 
 **Goal:** a first, published dashboard. Speed matters more than polish.
 
@@ -187,54 +168,64 @@ Note where it guessed wrong. You'll fix that in Sprint 2.
 
 ---
 
-## Sprint 2: Metric views (45 min)
+## Sprint 2: Metric views
 
-**Goal:** define your KPIs **once**, with business names, and rebuild the dashboard on them.
+**Goal:** write down each KPI **once**, with a clear business name, and use it everywhere.
 
 ### What is a metric view?
 
-A metric view is a Unity Catalog object, written in YAML, that has three parts:
-- **source and joins:** the fact table, and the dimension tables joined to it
-- **dimensions:** the things you group and filter by (Week, Region, Retailer …), with readable names
-- **measures:** the KPIs (Sales, Margin % …), defined once as aggregations
+Think of a metric view as your **KPI dictionary**. Instead of every chart doing its own sums on cryptic columns, you define each KPI
+once, for example *"Sales = the total of `nsv`"*, and every dashboard, Genie space and app uses that same definition.
 
-You query a metric view with `MEASURE()`: `SELECT Region, MEASURE(Sales) FROM mv_sales GROUP BY ALL`. Ratios like **Margin %**
-stay correct at any grouping, because the metric view computes them as `SUM(…) / SUM(…)`, not as an average of percentages.
+A metric view has three parts:
+
+| Part | In plain words | Example |
+|---|---|---|
+| **Source** | Where the numbers come from | the weekly sales table, linked to stores and products |
+| **Dimensions** | How you **slice** the numbers | Week, Region, Retailer, Category, Brand |
+| **Measures** | What you **count or calculate** | Sales, Units, Margin, Margin % |
+
+**Why it helps:** everyone gets the **same number** for "Margin %", whatever they group by. And business names like `Sales` and
+`Region` replace codes like `nsv` and `rgn`, so the dashboard AI and Genie stop guessing.
 
 ### Steps
 
-1. **Create `mv_sales`.** Open the **SQL editor**, paste the starter from [Appendix A](#appendix-a-metric-view-starter-fill-in-the-todos),
-   replace `<hack_catalog>` and `<your_schema>`, and fill in the TODOs. Or use Catalog Explorer → your schema → **Create** → **Metric view**.
-2. **Test it.** Run the `SELECT … MEASURE(Sales) …` query at the end of the starter. Check that the numbers look sensible.
-3. **Build all three metric views:**
+1. **Open the SQL editor** (left sidebar → **SQL Editor**) and select the hackathon **SQL warehouse**.
+2. **Build the sales metric view, `mv_sales`.** Copy the starter from [Appendix A1](#a1-sales-mv_sales) into the editor.
+   Replace `<hack_catalog>` and `<your_schema>` with your catalog and schema. Then fill in each `TODO`: every one tells you what to look for.
+3. **Run it**, then run the check query under the starter. You should see sales by region.
+4. **Build the other two metric views** the same way:
+   - **Budget, `mv_budget`**: starter in [Appendix A2](#a2-budget-mv_budget). It compares budget with actual sales.
+   - **Shelf execution, `mv_execution`**: starter in [Appendix A3](#a3-shelf-execution-mv_execution). It measures what merchandisers find in stores.
+5. **Add business descriptions** to each measure and dimension (`comment`), so people know exactly what they mean.
+   For example, `Sales`: *"Net sales value in ZAR excl. VAT. Also called revenue or NSV."* See the [cheat-sheet](#appendix-b-cheat-sheets).
+6. **Rebuild your dashboard (v2).** In the dashboard's **Data** tab, add your metric views as data sources and switch your charts to them.
+   Compare v2 with v1: are the numbers the same everywhere? Is each chart simpler to build?
+7. **Add a "Why?" page** with a drill-down (region → retailer → store) and an "OSA vs sales growth by region" chart.
+8. **Publish** again.
 
-   | Metric view | Built on | Measures to build |
-   |---|---|---|
-   | `mv_sales` | `fact_sales_weekly` + stores, products, dates | Sales, Units, Margin, **Margin %**, YoY growth %, Promo Sales |
-   | `mv_budget` | `fact_budget_monthly` | Budget, Actual, **Variance %** |
-   | `mv_execution` | `fact_store_visits` + stores | Visits, **Avg OSA %**, Avg POG compliance %, % of stores below the 85% OSA target |
+**What the three metric views contain**
 
-4. **Make them discoverable.** Add a `comment` to the metric view, and comments, display names and synonyms to dimensions and measures
-   (for example `Sales`: "Net sales value in ZAR excl. VAT, also called revenue or NSV").
-5. **Rebuild the dashboard.** In your dashboard's **Data** tab, add the metric views as data sources and switch your visuals to them.
-   That's dashboard **v2**. Compare it with v1: are the numbers consistent? Is each visual simpler?
-6. **Add a "Why?" page** with a drill-down (region → retailer → store) and an "OSA vs sales growth by region" visual.
-7. **Publish** again.
+| Metric view | Measures |
+|---|---|
+| `mv_sales` | Sales, Units, Margin, **Margin %**, Promo Sales, YoY growth % |
+| `mv_budget` | Budget, Actual, **Variance %** |
+| `mv_execution` | Visits, **Avg OSA %**, Avg POG compliance %, % of stores below the 85% OSA target |
 
 **Tips**
-- Look at the data before you write a measure: `SELECT * FROM <your_schema>.fact_sales_weekly LIMIT 20`.
-- Ask the Assistant: *"Which column in fact_sales_weekly holds the units sold?"* or *"Write a metric view measure for margin %"*.
-- Filtered measures use `FILTER`, for example `SUM(source.nsv) FILTER (WHERE …)`.
-- If the YAML fails, check the indentation (spaces, not tabs) and that every column name exists.
+- Not sure what a column holds? Look at a few rows: `SELECT * FROM <your_schema>.fact_sales_weekly LIMIT 20`.
+- Ask the Assistant in plain English: *"Which column in fact_sales_weekly holds the units sold?"* or *"Write a metric view measure for margin %"*.
+- An error when you run it? Check the spacing at the start of each line (use spaces, not tabs), and that each column name exists.
+- Stuck, or want to compare with yours? See **what a complete set of metric views looks like** in [`metric_views_example.md`](metric_views_example.md).
 
 ### ⭐ Bonus: build a custom visual
 
 Finished early? Add a **custom visual** to your dashboard: a **bullet chart of Sales vs Budget by region**, which the built-in chart types
-can't draw. AI/BI dashboards render custom visuals from a **Vega-Lite** spec (*Custom Viz*). See [Appendix D](#appendix-d--bonus-custom-visual-vega-lite).
+can't draw. AI/BI dashboards render custom visuals from a **Vega-Lite** spec (*Custom Viz*). See [Appendix D](#appendix-d-bonus-custom-visual).
 
 ---
 
-## Sprint 3: Genie quick win (25 min)
+## Sprint 3: Genie quick win
 
 **Goal:** a Genie space on the raw tables, and a first look at how well it answers.
 
@@ -266,7 +257,7 @@ Keep your notes. You'll ask the same questions again in Sprint 4.
 
 ---
 
-## Sprint 4a: Describe your data (20 min)
+## Sprint 4a: Describe your data
 
 **Goal:** give every table and column a clear description in Unity Catalog. **This is one of the most important skills of the day:**
 descriptions are written once and then used everywhere, by Genie, the Assistant, the dashboard AI and anyone browsing the catalog.
@@ -297,7 +288,7 @@ Always check them against the data. The [cheat-sheet in Appendix B](#appendix-b-
 
 ---
 
-## Sprint 4b: Tune Genie (30 min)
+## Sprint 4b: Tune Genie
 
 **Goal:** turn your Genie space into one a client could trust. Change **one thing at a time**, then re-ask the questions that still look wrong.
 
@@ -318,7 +309,7 @@ Always check them against the data. The [cheat-sheet in Appendix B](#appendix-b-
 
 ---
 
-## Sprint 5: App (20 min)
+## Sprint 5: App
 
 **Goal:** a deployed Databricks App with two tabs, built by **describing** it to Genie Code instead of coding it by hand.
 
@@ -373,11 +364,14 @@ Tell a **before → after** story:
 
 ---
 
-## Appendix A: Metric view starter (fill in the TODOs)
+## Appendix A: Metric view starters (fill in the TODOs)
 
-> The source columns are **cryptic on purpose** (`str_id`, `sku`, `qty`, `nsv`, `gp`, `rgn` …). A metric view is where you give them
-> **business names**. The joins and two examples are filled in. Work out the rest by looking at the tables in **Catalog Explorer**
-> (or ask the Assistant: *"what does column gp in fact_sales_weekly contain?"*).
+> The table columns are **cryptic on purpose** (`str_id`, `sku`, `qty`, `nsv`, `gp`, `rgn` …). The metric view is where you give them
+> **business names**. Each starter has the links between tables and one or two examples filled in. Work out the rest by looking at the
+> tables in **Catalog Explorer**, or ask the Assistant (*"what does column gp in fact_sales_weekly contain?"*).
+> Replace `<hack_catalog>` and `<your_schema>` everywhere before you run a starter.
+
+### A1: Sales (`mv_sales`)
 
 ```sql
 CREATE OR REPLACE VIEW <hack_catalog>.<your_schema>.mv_sales
@@ -406,17 +400,92 @@ measures:
     expr: SUM(source.nsv)          # net sales value, ZAR excl. VAT
   # TODO: Units (which column holds the units sold?)
   # TODO: Margin (gross profit in ZAR)
-  # TODO: Margin %: a ratio of two sums, not an average
-  # TODO: Promo Sales, using FILTER (WHERE …) on the promotion flag
+  # TODO: Margin %: margin divided by sales (a ratio of two totals, not an average)
+  # TODO: Promo Sales: sales only where the promotion flag is Y, using FILTER (WHERE …)
 $$;
 
+-- Check it
 SELECT Region, MEASURE(Sales) AS sales
 FROM <hack_catalog>.<your_schema>.mv_sales
 GROUP BY ALL ORDER BY sales DESC;
 ```
 
-You can also create metric views from **Catalog Explorer** (Create → Metric view) and ask the Assistant to help with the YAML.
-For `mv_budget` and `mv_execution`, follow the same pattern with `fact_budget_monthly` and `fact_store_visits` as the source.
+### A2: Budget (`mv_budget`)
+
+The budget table has no sales in it, so this starter's **source is a small query** that puts monthly budget and monthly actual sales side by
+side. It's filled in for you: you only add the measures.
+
+```sql
+CREATE OR REPLACE VIEW <hack_catalog>.<your_schema>.mv_budget
+WITH METRICS
+LANGUAGE YAML
+AS $$
+version: 1.1
+comment: "Monthly budget vs actual net sales"
+source: |
+  SELECT b.mth_strt_dt, b.rgn, b.rtl_grp, b.cat, b.bgt_nsv, a.actual_nsv
+  FROM <hack_catalog>.<your_schema>.fact_budget_monthly b
+  LEFT JOIN (
+    SELECT CAST(trunc(f.wk_strt_dt, 'MM') AS DATE) AS mth_strt_dt, s.rgn, s.rtl_grp, p.cat, SUM(f.nsv) AS actual_nsv
+    FROM <hack_catalog>.<your_schema>.fact_sales_weekly f
+    JOIN <hack_catalog>.<your_schema>.dim_store s ON f.str_id = s.str_id
+    JOIN <hack_catalog>.<your_schema>.dim_product p ON f.sku = p.sku
+    GROUP BY ALL) a
+  ON a.mth_strt_dt = b.mth_strt_dt AND a.rgn = b.rgn AND a.rtl_grp = b.rtl_grp AND a.cat = b.cat
+dimensions:
+  - name: Month
+    expr: mth_strt_dt
+  - name: Region
+    expr: rgn
+  # TODO: Retailer and Category
+measures:
+  - name: Budget
+    expr: SUM(bgt_nsv)
+  # TODO: Actual (the total of actual_nsv)
+  # TODO: Variance %: (actual minus budget) divided by budget
+$$;
+
+-- Check it
+SELECT Region, MEASURE(Budget) AS budget
+FROM <hack_catalog>.<your_schema>.mv_budget
+GROUP BY ALL ORDER BY budget DESC;
+```
+
+### A3: Shelf execution (`mv_execution`)
+
+```sql
+CREATE OR REPLACE VIEW <hack_catalog>.<your_schema>.mv_execution
+WITH METRICS
+LANGUAGE YAML
+AS $$
+version: 1.1
+comment: "In-store execution KPIs from merchandiser visits"
+source: <hack_catalog>.<your_schema>.fact_store_visits
+joins:
+  - name: store
+    source: <hack_catalog>.<your_schema>.dim_store
+    on: source.str_id = store.str_id
+dimensions:
+  - name: Visit Date
+    expr: source.vst_dt
+  - name: Region
+    expr: store.rgn
+  # TODO: Retailer and Store
+measures:
+  - name: Visits
+    expr: COUNT(1)
+  # TODO: Avg OSA % (the average of the on-shelf availability column)
+  # TODO: Avg POG compliance % (the average of the planogram compliance column)
+  # TODO: % of stores below target: stores with OSA under 85, divided by all stores visited
+$$;
+
+-- Check it
+SELECT Region, MEASURE(Visits) AS visits
+FROM <hack_catalog>.<your_schema>.mv_execution
+GROUP BY ALL ORDER BY visits DESC;
+```
+
+You can also create metric views from **Catalog Explorer** (your schema → **Create** → **Metric view**) and ask the Assistant to help.
 
 ---
 
@@ -491,7 +560,7 @@ Don't change the app's start command or port.
 
 ---
 
-## Appendix D: ⭐ Bonus custom visual (Vega-Lite)
+## Appendix D: Bonus custom visual
 
 **Goal:** a bullet chart that shows each region's **Sales** as a bar against its **Budget** (a lighter bar with a target tick).
 

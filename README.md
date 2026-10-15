@@ -23,7 +23,8 @@ tables into their own schema, so they own the data **and its descriptions**.
 
 ```
 attendees/                     # instructions only (share this folder with attendees)
-└── 01_instructions.md         # the hackathon, sprint by sprint: business questions, Genie questions, hints, troubleshooting, app prompts, bonus custom visual
+├── 01_instructions.md         # the hackathon, sprint by sprint: business questions, Genie questions, hints, troubleshooting, app prompts, bonus custom visual
+└── metric_views_example.md    # what complete metric views look like (mv_sales, mv_budget, mv_execution), linked from Sprint 2
 docs/
 └── hackathon-plan.md          # facilitator plan: agenda, data strategy, metric views, Genie ladder, grants, risks
 hack_setup/                    # facilitator only: everything to set up the hackathon
