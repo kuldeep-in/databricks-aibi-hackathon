@@ -400,7 +400,8 @@ databricks-aibi-hackathon/
 └── hack_setup/                    ← facilitator only: everything to set up the hackathon
     ├── config.yaml                ← settings: catalog, warehouse ID, attendee emails (don't commit real values)
     ├── 00_facilitator_runbook     ← Run all: hack_14oct + synthetic data + constraints + grants + one schema per attendee
-    └── 01_generate_synthetic_data ← synthetic data generator (called by the runbook)
+    ├── 01_generate_synthetic_data ← synthetic data generator (called by the runbook)
+    └── 02_add_attendees           ← Run all after adding emails: creates missing schemas, checks access, keys and owners
 ```
 
 

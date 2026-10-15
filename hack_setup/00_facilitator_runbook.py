@@ -8,8 +8,8 @@
 # MAGIC attendee with their own copy of the data. Fill in the config file, then click **Run all** (about 10–20 minutes).
 # MAGIC
 # MAGIC Everything is driven by **one config file**, `hack_setup/config.yaml`: the catalog, the SQL warehouse ID, the source schema and the
-# MAGIC attendee list (name and email). There are no widgets. It's safe to run again, for example after adding attendees:
-# MAGIC existing attendee schemas are never touched.
+# MAGIC attendee emails. There are no widgets. **It's safe to run again** (for example after adding attendees): nothing is ever
+# MAGIC deleted or recreated. An existing `hack_14oct` keeps its data, and existing attendee schemas are only reported.
 # MAGIC
 # MAGIC | Step | What | Changes anything? |
 # MAGIC |---|---|---|
@@ -148,7 +148,7 @@ display(spark.sql(f"SHOW SCHEMAS IN {q(catalog)}"))
 # MAGIC
 # MAGIC **3a** runs `01_generate_synthetic_data`, which writes a fully synthetic, fictional dataset **straight into Delta tables** in the source
 # MAGIC schema (10 tables, about 350K weekly sales rows over 156 weeks, insights planted, **no descriptions and no metric views**). It takes a few minutes on serverless.
-# MAGIC Re-running it overwrites the source tables with the same data (fixed seed). Step 4 then re-adds the constraints.
+# MAGIC **If `hack_14oct` already has the tables, nothing is regenerated**: the cell just reports it. To regenerate, drop `hack_14oct` first.
 
 # COMMAND ----------
 

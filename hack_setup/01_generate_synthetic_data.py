@@ -32,6 +32,7 @@
 # MAGIC `tier_cd` K/C/E, `cat_typ` FD/LQ/GM, `prm_typ` PR/MB/BN, `prm_flg` Y/N). **No descriptions are written.** Attendees add them in
 # MAGIC Sprint 4a and build metric views in Sprint 2 to get good results. The full column dictionary is the `RENAMES` map below.
 # MAGIC The data is **deterministic** for a given seed, and it ends with the last complete week before the run date.
+# MAGIC **It never overwrites:** if the source schema already has any of these tables, it stops without changing anything.
 
 # COMMAND ----------
 
@@ -64,6 +65,15 @@ END_WEEK = today - dt.timedelta(days=today.weekday() + 7)          # Monday of t
 START_WEEK = END_WEEK - dt.timedelta(weeks=N_WEEKS - 1)
 print(f"Target {catalog}.{schema} · weeks {START_WEEK} → {END_WEEK} · {N_STORES} stores · {N_SKUS} SKUs")
 spark.sql(f"CREATE SCHEMA IF NOT EXISTS `{catalog}`.`{schema}` COMMENT 'Perfect Store hackathon: read-only source data. Attendees copy from here.'")
+
+# Never overwrite existing data: if any of the hackathon tables already exist in the source schema, stop here.
+# (To regenerate, drop the source schema first.)
+TARGET_TABLES = ["dim_date", "dim_store", "dim_merchandiser", "dim_supplier", "dim_product", "fact_promotions",
+                 "fact_sales_weekly", "fact_budget_monthly", "fact_store_visits", "visit_notes"]
+already = sorted({r.tableName for r in spark.sql(f"SHOW TABLES IN `{catalog}`.`{schema}`").collect()} & set(TARGET_TABLES))
+if already:
+    dbutils.notebook.exit(f"skipped: {catalog}.{schema} already has {len(already)} of {len(TARGET_TABLES)} hackathon tables, "
+                          f"nothing was regenerated")
 
 def tbl(name):
     return f"`{catalog}`.`{schema}`.`{name}`"

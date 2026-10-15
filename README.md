@@ -29,7 +29,8 @@ docs/
 hack_setup/                    # facilitator only: everything to set up the hackathon
 ├── config.yaml                # settings: catalog, warehouse ID, attendee emails
 ├── 00_facilitator_runbook.py  # Run all: read-only hack_14oct with synthetic data, constraints, grants, one schema per attendee
-└── 01_generate_synthetic_data.py  # synthetic, fictional dataset generator (called by the runbook)
+├── 01_generate_synthetic_data.py  # synthetic, fictional dataset generator (called by the runbook)
+└── 02_add_attendees.py        # Run all after adding emails to config.yaml: creates missing attendee schemas, checks access, keys and owners
 ```
 
 ## Getting started (facilitator)
@@ -41,5 +42,7 @@ hack_setup/                    # facilitator only: everything to set up the hack
    with the synthetic data, grants access, and creates every attendee's schema (owned by them).
 4. Test as an attendee: add yourself to `config.yaml` before the run, then follow `attendees/01_instructions.md` in your schema.
 5. Fill in the placeholders in `attendees/01_instructions.md` (workspace URL, catalog, warehouse ID) and share the `attendees/` folder with attendees.
+
+**Adding attendees later:** add their emails to `config.yaml`, then **Run all** on `hack_setup/02_add_attendees`. It never deletes or recreates anything.
 
 > No data files are included: the runbook generates a fully synthetic, fictional dataset.
